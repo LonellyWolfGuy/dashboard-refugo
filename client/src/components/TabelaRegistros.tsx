@@ -1,12 +1,12 @@
 // Design: Clean Manufacturing Dashboard
-// Tabela de registros diários com edição inline, exclusão e adição de novos registros
+// Tabela de lançamentos com suporte a qualquer data (passado, presente ou futuro)
 
 import { useState } from "react";
 import { useDashboard } from "@/contexts/DashboardContext";
 import { MESES_NOMES } from "@/lib/initialData";
 import { DailyRecord, RefugoMotivo } from "@/lib/initialData";
 import { cn } from "@/lib/utils";
-import { Pencil, Trash2, Plus, Check, X, ChevronUp, ChevronDown, AlertCircle } from "lucide-react";
+import { Pencil, Trash2, Plus, Check, X, ChevronUp, ChevronDown, AlertCircle, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import ModalMotivoRefugo from "./ModalMotivoRefugo";
 
@@ -15,18 +15,21 @@ function formatData(data: string): string {
   return d.toLocaleDateString("pt-BR");
 }
 
-function getPercentColor(pct: number, meta: number): string {
-  if (pct === 0) return "text-slate-400";
-  if (pct <= meta * 0.8) return "text-emerald-600 font-semibold";
-  if (pct <= meta) return "text-amber-600 font-semibold";
-  return "text-red-600 font-semibold";
-}
-
 function getPercentBadge(pct: number, meta: number): string {
   if (pct === 0) return "bg-slate-100 text-slate-500";
   if (pct <= meta * 0.8) return "bg-emerald-100 text-emerald-700";
   if (pct <= meta) return "bg-amber-100 text-amber-700";
   return "bg-red-100 text-red-700";
+}
+
+// Extrai mês (1-12) e ano de uma string "YYYY-MM-DD"
+function mesAnoDeData(data: string): { mes: number; ano: number } | null {
+  const partes = data.split("-");
+  if (partes.length !== 3) return null;
+  const ano = parseInt(partes[0]);
+  const mes = parseInt(partes[1]);
+  if (isNaN(ano) || isNaN(mes) || mes < 1 || mes > 12) return null;
+  return { mes, ano };
 }
 
 interface EditState {
@@ -39,11 +42,11 @@ interface EditState {
 const emptyEdit: EditState = { id: null, data: "", producao: "", refugo: "" };
 
 export default function TabelaRegistros() {
-  const { mesAtual, getMesData, adicionarRegistro, editarRegistro, excluirRegistro, metaRefugo } = useDashboard();
+  const { mesAtual, anoAtual, getMesData, adicionarRegistro, editarRegistro, excluirRegistro, metaRefugo, meses } = useDashboard();
   const mesData = getMesData(mesAtual);
 
   const [editState, setEditState] = useState<EditState>(emptyEdit);
-  const [novoRegistro, setNovoRegistro] = useState(false);
+  const [novoAberto, setNovoAberto] = useState(false);
   const [novoData, setNovoData] = useState("");
   const [novoProducao, setNovoProducao] = useState("");
   const [novoRefugo, setNovoRefugo] = useState("");
@@ -56,13 +59,16 @@ export default function TabelaRegistros() {
     return sortDir === "asc" ? diff : -diff;
   });
 
+  // ── Aviso quando a data digitada pertence a outro mês ──────────────────────
+  const novoMesAno = mesAnoDeData(novoData);
+  const dataEmOutroMes =
+    novoMesAno && (novoMesAno.mes !== mesAtual || novoMesAno.ano !== anoAtual);
+  const nomeMesDestino =
+    novoMesAno ? `${MESES_NOMES[novoMesAno.mes - 1]} ${novoMesAno.ano}` : "";
+
+  // ── Edição ─────────────────────────────────────────────────────────────────
   function iniciarEdicao(r: DailyRecord) {
-    setEditState({
-      id: r.id,
-      data: r.data,
-      producao: r.producao.toString(),
-      refugo: r.refugo.toString(),
-    });
+    setEditState({ id: r.id, data: r.data, producao: r.producao.toString(), refugo: r.refugo.toString() });
   }
 
   function salvarEdicao() {
@@ -82,10 +88,57 @@ export default function TabelaRegistros() {
     toast.success("Registro atualizado com sucesso.");
   }
 
-  function cancelarEdicao() {
-    setEditState(emptyEdit);
+  // ── Novo registro ──────────────────────────────────────────────────────────
+  function salvarNovo() {
+    const producao = parseFloat(novoProducao.replace(",", "."));
+    const refugo = parseFloat(novoRefugo.replace(",", "."));
+
+    if (isNaN(producao) || isNaN(refugo) || !novoData) {
+      toast.error("Preencha todos os campos corretamente.");
+      return;
+    }
+    if (producao < 0 || refugo < 0) {
+      toast.error("Os valores não podem ser negativos.");
+      return;
+    }
+
+    // Determinar o mês de destino a partir da data digitada
+    const destino = mesAnoDeData(novoData);
+    if (!destino) {
+      toast.error("Data inválida.");
+      return;
+    }
+
+    // Verificar duplicata no mês de destino
+    const mesDestino = getMesData(destino.mes);
+    const existe = mesDestino.registros.some(r => r.data === novoData);
+    if (existe) {
+      toast.error(`Já existe um registro para ${formatData(novoData)}.`);
+      return;
+    }
+
+    adicionarRegistro(destino.mes, { data: novoData, producao, refugo });
+
+    setNovoData("");
+    setNovoProducao("");
+    setNovoRefugo("");
+    setNovoAberto(false);
+
+    if (dataEmOutroMes) {
+      toast.success(`Registro adicionado em ${nomeMesDestino}.`);
+    } else {
+      toast.success("Registro adicionado com sucesso.");
+    }
   }
 
+  function cancelarNovo() {
+    setNovoData("");
+    setNovoProducao("");
+    setNovoRefugo("");
+    setNovoAberto(false);
+  }
+
+  // ── Motivos ────────────────────────────────────────────────────────────────
   function abrirModalMotivos(registro: DailyRecord) {
     setRegistroSelecionado(registro);
     setModalMotivoAberto(true);
@@ -107,75 +160,64 @@ export default function TabelaRegistros() {
     toast.success("Registro excluído.");
   }
 
-  function salvarNovo() {
-    const producao = parseFloat(novoProducao.replace(",", "."));
-    const refugo = parseFloat(novoRefugo.replace(",", "."));
-    if (isNaN(producao) || isNaN(refugo) || !novoData) {
-      toast.error("Preencha todos os campos corretamente.");
-      return;
-    }
-    if (producao < 0 || refugo < 0) {
-      toast.error("Os valores não podem ser negativos.");
-      return;
-    }
-    // Verificar data duplicada
-    const existe = mesData.registros.some(r => r.data === novoData);
-    if (existe) {
-      toast.error("Já existe um registro para esta data.");
-      return;
-    }
-    adicionarRegistro(mesAtual, { data: novoData, producao, refugo });
-    setNovoData("");
-    setNovoProducao("");
-    setNovoRefugo("");
-    setNovoRegistro(false);
-    toast.success("Registro adicionado com sucesso.");
+  function abrirNovo() {
+    // Sugere a data de hoje como padrão, mas sem restrição
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = hoje.getMonth() + 1;
+    const dia = hoje.getDate();
+    setNovoData(`${ano}-${mes.toString().padStart(2, "0")}-${dia.toString().padStart(2, "0")}`);
+    setNovoAberto(true);
   }
 
-  function cancelarNovo() {
-    setNovoData("");
-    setNovoProducao("");
-    setNovoRefugo("");
-    setNovoRegistro(false);
-  }
-
-  // Calcular totais
+  // ── Totais ─────────────────────────────────────────────────────────────────
   const totalProducao = registros.reduce((s, r) => s + r.producao, 0);
   const totalRefugo = registros.reduce((s, r) => s + r.refugo, 0);
   const totalGeral = totalProducao + totalRefugo;
   const percentTotal = totalGeral > 0 ? (totalRefugo / totalGeral) * 100 : 0;
 
-  // Sugerir data padrão para novo registro
-  function getDataSugerida(): string {
-    const hoje = new Date();
-    const ano = hoje.getFullYear();
-    const mes = mesAtual.toString().padStart(2, "0");
-    const dia = hoje.getDate().toString().padStart(2, "0");
-    return `${ano}-${mes}-${dia}`;
-  }
+  // Pré-cálculo da linha de novo
+  const novoProd = parseFloat(novoProducao || "0");
+  const novoRef = parseFloat(novoRefugo || "0");
+  const novoTotal = novoProd + novoRef;
+  const novoPct = novoTotal > 0 ? (novoRef / novoTotal) * 100 : 0;
 
-  function abrirNovo() {
-    setNovoData(getDataSugerida());
-    setNovoRegistro(true);
-  }
+  // Pré-cálculo da linha em edição
+  const editProd = parseFloat(editState.producao || "0");
+  const editRef = parseFloat(editState.refugo || "0");
+  const editTotal = editProd + editRef;
+  const editPct = editTotal > 0 ? (editRef / editTotal) * 100 : 0;
 
   return (
     <div className="bg-white rounded-xl border border-slate-200">
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
         <div>
-          <h3 className="text-sm font-semibold text-slate-700">Registros Diários</h3>
-          <p className="text-xs text-slate-400">{MESES_NOMES[mesAtual - 1]} 2026 — {registros.length} registro{registros.length !== 1 ? "s" : ""}</p>
+          <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+            <CalendarDays className="w-4 h-4 text-slate-400" />
+            Lançamentos
+          </h3>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {MESES_NOMES[mesAtual - 1]} {anoAtual} — {registros.length} registro{registros.length !== 1 ? "s" : ""}
+          </p>
         </div>
         <button
           onClick={abrirNovo}
-          disabled={novoRegistro}
+          disabled={novoAberto}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-900 text-white text-xs font-semibold rounded-lg hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Plus className="w-3.5 h-3.5" />
-          Novo Registro
+          Novo Lançamento
         </button>
       </div>
+
+      {/* Aviso data em outro mês */}
+      {novoAberto && dataEmOutroMes && (
+        <div className="mx-5 mt-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 flex items-center gap-2">
+          <CalendarDays className="w-3.5 h-3.5 shrink-0" />
+          Esta data pertence a <strong>{nomeMesDestino}</strong>. O registro será salvo naquele mês automaticamente.
+        </div>
+      )}
 
       {/* Tabela */}
       <div className="overflow-x-auto">
@@ -199,8 +241,9 @@ export default function TabelaRegistros() {
             </tr>
           </thead>
           <tbody>
-            {/* Linha de novo registro */}
-            {novoRegistro && (
+
+            {/* ── Linha de novo lançamento ── */}
+            {novoAberto && (
               <tr className="bg-blue-50 border-b border-blue-100">
                 <td className="px-5 py-2.5">
                   <input
@@ -217,8 +260,7 @@ export default function TabelaRegistros() {
                     value={novoProducao}
                     onChange={e => setNovoProducao(e.target.value)}
                     className="w-full border border-blue-300 rounded px-2 py-1 text-xs text-right focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-                    step="0.01"
-                    min="0"
+                    step="0.01" min="0"
                   />
                 </td>
                 <td className="px-5 py-2.5">
@@ -228,19 +270,14 @@ export default function TabelaRegistros() {
                     value={novoRefugo}
                     onChange={e => setNovoRefugo(e.target.value)}
                     className="w-full border border-blue-300 rounded px-2 py-1 text-xs text-right focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-                    step="0.01"
-                    min="0"
+                    step="0.01" min="0"
                   />
                 </td>
                 <td className="px-5 py-2.5 text-right text-xs text-slate-400 font-mono">
-                  {novoProducao && novoRefugo
-                    ? (parseFloat(novoProducao || "0") + parseFloat(novoRefugo || "0")).toLocaleString("pt-BR", { maximumFractionDigits: 2 })
-                    : "—"}
+                  {novoTotal > 0 ? novoTotal.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) : "—"}
                 </td>
                 <td className="px-5 py-2.5 text-center text-xs text-slate-400 font-mono">
-                  {novoProducao && novoRefugo && (parseFloat(novoProducao) + parseFloat(novoRefugo)) > 0
-                    ? `${((parseFloat(novoRefugo) / (parseFloat(novoProducao) + parseFloat(novoRefugo))) * 100).toFixed(2)}%`
-                    : "—"}
+                  {novoTotal > 0 ? `${novoPct.toFixed(2)}%` : "—"}
                 </td>
                 <td className="px-5 py-2.5">
                   <div className="flex items-center justify-center gap-1.5">
@@ -255,29 +292,28 @@ export default function TabelaRegistros() {
               </tr>
             )}
 
-            {registros.length === 0 && !novoRegistro && (
+            {/* ── Estado vazio ── */}
+            {registros.length === 0 && !novoAberto && (
               <tr>
                 <td colSpan={6} className="px-5 py-12 text-center">
                   <div className="flex flex-col items-center gap-2">
                     <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center">
                       <Plus className="w-5 h-5 text-slate-300" />
                     </div>
-                    <p className="text-sm text-slate-500">Nenhum registro para este mês</p>
-                    <p className="text-xs text-slate-400">Clique em "Novo Registro" para começar</p>
+                    <p className="text-sm text-slate-500">Nenhum lançamento para este mês</p>
+                    <p className="text-xs text-slate-400">Clique em "Novo Lançamento" para começar</p>
                   </div>
                 </td>
               </tr>
             )}
 
+            {/* ── Registros existentes ── */}
             {registros.map((r, idx) => {
               const total = r.producao + r.refugo;
               const pct = total > 0 ? (r.refugo / total) * 100 : 0;
               const isEditing = editState.id === r.id;
 
               if (isEditing) {
-                const editTotal = (parseFloat(editState.producao || "0") + parseFloat(editState.refugo || "0"));
-                const editPct = editTotal > 0 ? (parseFloat(editState.refugo || "0") / editTotal) * 100 : 0;
-
                 return (
                   <tr key={r.id} className="bg-amber-50 border-b border-amber-100">
                     <td className="px-5 py-2.5">
@@ -294,8 +330,7 @@ export default function TabelaRegistros() {
                         value={editState.producao}
                         onChange={e => setEditState(s => ({ ...s, producao: e.target.value }))}
                         className="w-full border border-amber-300 rounded px-2 py-1 text-xs text-right focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white"
-                        step="0.01"
-                        min="0"
+                        step="0.01" min="0"
                       />
                     </td>
                     <td className="px-5 py-2.5">
@@ -304,8 +339,7 @@ export default function TabelaRegistros() {
                         value={editState.refugo}
                         onChange={e => setEditState(s => ({ ...s, refugo: e.target.value }))}
                         className="w-full border border-amber-300 rounded px-2 py-1 text-xs text-right focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white"
-                        step="0.01"
-                        min="0"
+                        step="0.01" min="0"
                       />
                     </td>
                     <td className="px-5 py-2.5 text-right text-xs font-mono text-slate-600">
@@ -321,7 +355,7 @@ export default function TabelaRegistros() {
                         <button onClick={salvarEdicao} className="p-1 text-emerald-600 hover:bg-emerald-100 rounded transition-colors" title="Salvar">
                           <Check className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={cancelarEdicao} className="p-1 text-slate-400 hover:bg-slate-100 rounded transition-colors" title="Cancelar">
+                        <button onClick={() => setEditState(emptyEdit)} className="p-1 text-slate-400 hover:bg-slate-100 rounded transition-colors" title="Cancelar">
                           <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -417,10 +451,7 @@ export default function TabelaRegistros() {
       {/* Modal de Motivos */}
       <ModalMotivoRefugo
         isOpen={modalMotivoAberto}
-        onClose={() => {
-          setModalMotivoAberto(false);
-          setRegistroSelecionado(null);
-        }}
+        onClose={() => { setModalMotivoAberto(false); setRegistroSelecionado(null); }}
         motivos={registroSelecionado?.motivos}
         totalRefugo={registroSelecionado?.refugo || 0}
         onSave={salvarMotivos}
