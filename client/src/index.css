@@ -134,3 +134,84 @@
     }
   }
 }
+
+/* ===================== DARK MODE ===================== */
+.dark {
+  --background: #0f172a;
+  --foreground: #f1f5f9;
+  --card: #1e293b;
+  --card-foreground: #f1f5f9;
+  --popover: #1e293b;
+  --popover-foreground: #f1f5f9;
+  --primary: #22c55e;
+  --primary-foreground: #052e16;
+  --secondary: #1e293b;
+  --secondary-foreground: #cbd5e1;
+  --muted: #334155;
+  --muted-foreground: #94a3b8;
+  --accent: #f87171;
+  --accent-foreground: #1e293b;
+  --destructive: #f87171;
+  --destructive-foreground: #1e293b;
+  --border: #334155;
+  --input: #334155;
+  --ring: #22c55e;
+  --chart-1: #22c55e;
+  --chart-2: #f87171;
+  --chart-3: #fbbf24;
+  --chart-4: #34d399;
+  --chart-5: #4ade80;
+  --sidebar: #1e293b;
+  --sidebar-foreground: #f1f5f9;
+  --sidebar-primary: #22c55e;
+  --sidebar-primary-foreground: #052e16;
+  --sidebar-accent: #f87171;
+  --sidebar-accent-foreground: #1e293b;
+  --sidebar-border: #334155;
+  --sidebar-ring: #22c55e;
+}
+
+/* Dark mode — overrides de cores hardcoded do Tailwind */
+.dark body,
+.dark #root {
+  background-color: #0f172a;
+  color: #f1f5f9;
+}
+
+.dark .bg-white        { background-color: #1e293b !important; }
+.dark .bg-gray-50      { background-color: #0f172a !important; }
+.dark .bg-gray-100     { background-color: #1e293b !important; }
+.dark .bg-gray-200     { background-color: #334155 !important; }
+.dark .border-gray-200 { border-color: #334155 !important; }
+.dark .border-gray-100 { border-color: #1e293b !important; }
+.dark .border-slate-200{ border-color: #334155 !important; }
+
+.dark .text-gray-800   { color: #f1f5f9 !important; }
+.dark .text-gray-700   { color: #e2e8f0 !important; }
+.dark .text-gray-600   { color: #cbd5e1 !important; }
+.dark .text-gray-500   { color: #94a3b8 !important; }
+.dark .text-gray-400   { color: #64748b !important; }
+.dark .text-slate-800  { color: #f1f5f9 !important; }
+.dark .text-slate-700  { color: #e2e8f0 !important; }
+.dark .text-slate-600  { color: #cbd5e1 !important; }
+.dark .text-slate-500  { color: #94a3b8 !important; }
+.dark .text-slate-400  { color: #64748b !important; }
+
+.dark .hover\:bg-gray-100:hover { background-color: #334155 !important; }
+.dark .hover\:bg-gray-50:hover  { background-color: #1e293b !important; }
+
+/* Cards e tabelas */
+.dark [class*="rounded"][class*="border"],
+.dark .card { background-color: #1e293b; border-color: #334155; }
+
+/* Inputs */
+.dark input, .dark select, .dark textarea {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+/* Table */
+.dark table tbody tr:hover { background-color: #1e293b !important; }
+.dark table thead tr       { background-color: #0f172a !important; }
+.dark td, .dark th         { border-color: #334155 !important; }

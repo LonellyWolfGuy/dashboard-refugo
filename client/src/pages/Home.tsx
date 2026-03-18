@@ -2,8 +2,9 @@
 // Página principal: layout com sidebar + área de conteúdo principal
 // Filosofia: clareza absoluta, dados em primeiro plano, feedback imediato
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDashboard } from "@/contexts/DashboardContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { MESES_NOMES } from "@/lib/initialData";
 import Sidebar from "@/components/Sidebar";
 import KpiCards from "@/components/KpiCards";
@@ -12,15 +13,29 @@ import GraficoAnual from "@/components/GraficoAnual";
 import TabelaRegistros from "@/components/TabelaRegistros";
 import ModalConfiguracoes from "@/components/ModalConfiguracoes";
 import AnaliseMotivoRefugo from "@/components/AnaliseMotivoRefugo";
-import { Menu, X, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { Menu, ChevronLeft, ChevronRight, Download, Sun, Moon, Clock } from "lucide-react";
 import { generateMonthlyPDF } from "@/lib/generatePDF";
 import { toast } from "sonner";
 
 export default function Home() {
   const { mesAtual, setMesAtual, meses, metaRefugo } = useDashboard();
+  const { theme, toggleTheme } = useTheme();
   const [modalConfig, setModalConfig] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [exportandoPDF, setExportandoPDF] = useState(false);
+  const [agora, setAgora] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setAgora(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const dataFormatada = agora.toLocaleDateString("pt-BR", {
+    weekday: "short", day: "2-digit", month: "2-digit", year: "numeric",
+  });
+  const horaFormatada = agora.toLocaleTimeString("pt-BR", {
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
 
   async function handleExportPDF() {
     try {
@@ -45,7 +60,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className={`flex min-h-screen bg-gray-50${theme === "dark" ? " dark" : ""}`}>
       {/* Sidebar Desktop */}
       <div className="hidden lg:block flex-shrink-0">
         <div className="sticky top-0 h-screen overflow-y-auto">
@@ -104,6 +119,14 @@ export default function Home() {
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Relógio */}
+              <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-gray-50 text-xs text-gray-600">
+                <Clock className="w-3.5 h-3.5 text-gray-400" />
+                <span className="font-medium capitalize">{dataFormatada}</span>
+                <span className="text-gray-400">|</span>
+                <span className="font-mono font-semibold text-gray-700 tabular-nums">{horaFormatada}</span>
+              </div>
+
               <button
                 onClick={handleExportPDF}
                 disabled={exportandoPDF}
@@ -112,6 +135,15 @@ export default function Home() {
               >
                 <Download className="w-4 h-4" />
                 <span className="hidden sm:inline">Exportar PDF</span>
+              </button>
+
+              {/* Toggle modo claro/escuro */}
+              <button
+                onClick={toggleTheme}
+                title={theme === "dark" ? "Mudar para modo claro" : "Mudar para modo escuro"}
+                className="p-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+              >
+                {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
             </div>
           </div>
