@@ -113,9 +113,6 @@ export default function Home() {
                 <Download className="w-4 h-4" />
                 <span className="hidden sm:inline">Exportar PDF</span>
               </button>
-              <span className="hidden sm:block text-xs text-gray-400 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-200">
-                Dados salvos localmente
-              </span>
             </div>
           </div>
         </header>
@@ -142,12 +139,7 @@ export default function Home() {
           <TabelaRegistros />
         </div>
 
-        {/* Footer */}
-        <footer className="px-6 py-3 border-t border-slate-200 bg-white">
-          <p className="text-xs text-slate-400 text-center">
-            Controle de Refugo 2026 — Dados armazenados localmente no navegador
-          </p>
-        </footer>
+
       </main>
 
       {/* Modal de Configurações */}
