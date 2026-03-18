@@ -2,9 +2,13 @@ import express, { type Request, type Response, type NextFunction } from "express
 import { nanoid } from "nanoid";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { db } from "./db";
-import { entries, metas, insertEntrySchema, updateEntrySchema } from "@shared/schema";
+import { entries, metas, users, insertEntrySchema, updateEntrySchema } from "@shared/schema";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET = process.env.JWT_SECRET || "implatec-refugo-secret-2026-change-in-production";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -62,8 +66,173 @@ app.get("/api/health", async (_req, res) => {
 });
 
 // =============================================================================
-// ENTRIES — /api/entries
+// AUTH MIDDLEWARE
 // =============================================================================
+
+interface JwtPayload {
+  userId: string;
+  username: string;
+  role: string;
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: JwtPayload;
+    }
+  }
+}
+
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Não autenticado" });
+  }
+  const token = authHeader.slice(7);
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    req.user = payload;
+    next();
+  } catch {
+    return res.status(401).json({ error: "Token inválido ou expirado" });
+  }
+}
+
+// =============================================================================
+// AUTH ROUTES — /api/auth
+// =============================================================================
+
+app.post("/api/auth/login", async (req: Request, res: Response) => {
+  try {
+    const { username, password } = req.body as { username: string; password: string };
+    if (!username || !password) {
+      return res.status(400).json({ error: "Usuário e senha são obrigatórios" });
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.username, username.trim().toLowerCase()));
+
+    if (!user || !user.ativo) {
+      return res.status(401).json({ error: "Usuário ou senha incorretos" });
+    }
+
+    const senhaValida = await bcrypt.compare(password, user.passwordHash);
+    if (!senhaValida) {
+      return res.status(401).json({ error: "Usuário ou senha incorretos" });
+    }
+
+    const token = jwt.sign(
+      { userId: user.id, username: user.username, role: user.role },
+      JWT_SECRET,
+      { expiresIn: "8h" }
+    );
+
+    res.json({
+      token,
+      user: { id: user.id, username: user.username, nome: user.nome, role: user.role },
+    });
+  } catch (err) {
+    console.error("[POST /api/auth/login]", err);
+    res.status(500).json({ error: "Erro interno" });
+  }
+});
+
+app.get("/api/auth/me", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const [user] = await db.select().from(users).where(eq(users.id, req.user!.userId));
+    if (!user || !user.ativo) return res.status(401).json({ error: "Não autenticado" });
+    res.json({ id: user.id, username: user.username, nome: user.nome, role: user.role });
+  } catch (err) {
+    console.error("[GET /api/auth/me]", err);
+    res.status(500).json({ error: "Erro interno" });
+  }
+});
+
+app.post("/api/auth/logout", (_req, res) => {
+  res.json({ ok: true });
+});
+
+// =============================================================================
+// USERS — /api/users  (somente admin)
+// =============================================================================
+
+app.get("/api/users", requireAuth, async (req: Request, res: Response) => {
+  if (req.user!.role !== "admin") return res.status(403).json({ error: "Sem permissão" });
+  try {
+    const rows = await db
+      .select({ id: users.id, username: users.username, nome: users.nome, role: users.role, ativo: users.ativo, createdAt: users.createdAt })
+      .from(users)
+      .orderBy(users.nome);
+    res.json(rows);
+  } catch (err) {
+    console.error("[GET /api/users]", err);
+    res.status(500).json({ error: "Erro interno" });
+  }
+});
+
+app.post("/api/users", requireAuth, async (req: Request, res: Response) => {
+  if (req.user!.role !== "admin") return res.status(403).json({ error: "Sem permissão" });
+  try {
+    const { username, password, nome, role } = req.body as { username: string; password: string; nome: string; role: string };
+    if (!username || !password || !nome) return res.status(400).json({ error: "username, password e nome são obrigatórios" });
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    const [user] = await db.insert(users).values({
+      id: nanoid(),
+      username: username.trim().toLowerCase(),
+      passwordHash,
+      nome,
+      role: role === "admin" ? "admin" : "viewer",
+    }).returning({ id: users.id, username: users.username, nome: users.nome, role: users.role, ativo: users.ativo });
+
+    res.status(201).json(user);
+  } catch (err: any) {
+    if (err?.code === "23505") return res.status(409).json({ error: "Nome de usuário já existe" });
+    console.error("[POST /api/users]", err);
+    res.status(500).json({ error: "Erro interno" });
+  }
+});
+
+app.patch("/api/users/:id", requireAuth, async (req: Request, res: Response) => {
+  if (req.user!.role !== "admin") return res.status(403).json({ error: "Sem permissão" });
+  try {
+    const { password, nome, role, ativo } = req.body as { password?: string; nome?: string; role?: string; ativo?: boolean };
+    const updates: Record<string, any> = { updatedAt: new Date() };
+    if (nome) updates.nome = nome;
+    if (role) updates.role = role === "admin" ? "admin" : "viewer";
+    if (ativo !== undefined) updates.ativo = ativo;
+    if (password) updates.passwordHash = await bcrypt.hash(password, 12);
+
+    const [user] = await db.update(users).set(updates).where(eq(users.id, req.params.id))
+      .returning({ id: users.id, username: users.username, nome: users.nome, role: users.role, ativo: users.ativo });
+    if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
+    res.json(user);
+  } catch (err) {
+    console.error("[PATCH /api/users/:id]", err);
+    res.status(500).json({ error: "Erro interno" });
+  }
+});
+
+app.delete("/api/users/:id", requireAuth, async (req: Request, res: Response) => {
+  if (req.user!.role !== "admin") return res.status(403).json({ error: "Sem permissão" });
+  if (req.params.id === req.user!.userId) return res.status(400).json({ error: "Não é possível excluir o próprio usuário" });
+  try {
+    const result = await db.delete(users).where(eq(users.id, req.params.id)).returning();
+    if (!result.length) return res.status(404).json({ error: "Usuário não encontrado" });
+    res.status(204).send();
+  } catch (err) {
+    console.error("[DELETE /api/users/:id]", err);
+    res.status(500).json({ error: "Erro interno" });
+  }
+});
+
+// =============================================================================
+// PROTECT ALL /api routes below with requireAuth
+// =============================================================================
+
+app.use("/api/entries", requireAuth);
+app.use("/api/summaries", requireAuth);
+app.use("/api/metas", requireAuth);
+app.use("/api/analytics", requireAuth);
 
 // GET /api/entries?month=2026-03
 app.get("/api/entries", async (req: Request, res: Response) => {

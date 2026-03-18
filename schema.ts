@@ -1,4 +1,4 @@
-import { pgTable, text, numeric, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, numeric, timestamp, pgEnum, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -31,6 +31,17 @@ export const metas = pgTable("metas", {
   metaPerda: numeric("meta_perda", { precision: 6, scale: 2 }).notNull().default("2.00"),
 });
 
+export const users = pgTable("users", {
+  id: text("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  nome: text("nome").notNull(),
+  role: text("role").notNull().default("viewer"), // "admin" | "viewer"
+  ativo: boolean("ativo").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // =============================================================================
 // Zod schemas
 // =============================================================================
@@ -58,3 +69,5 @@ export type Entry = typeof entries.$inferSelect;
 export type InsertEntry = z.infer<typeof insertEntrySchema>;
 export type Meta = typeof metas.$inferSelect;
 export type InsertMeta = z.infer<typeof insertMetaSchema>;
+export type User = typeof users.$inferSelect;
+export type InsertUser = typeof users.$inferInsert;

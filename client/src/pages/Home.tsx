@@ -5,6 +5,7 @@
 import { useState, useEffect } from "react";
 import { useDashboard } from "@/contexts/DashboardContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { MESES_NOMES } from "@/lib/initialData";
 import Sidebar from "@/components/Sidebar";
 import KpiCards from "@/components/KpiCards";
@@ -13,13 +14,14 @@ import GraficoAnual from "@/components/GraficoAnual";
 import TabelaRegistros from "@/components/TabelaRegistros";
 import ModalConfiguracoes from "@/components/ModalConfiguracoes";
 import AnaliseMotivoRefugo from "@/components/AnaliseMotivoRefugo";
-import { Menu, ChevronLeft, ChevronRight, Download, Sun, Moon, Clock } from "lucide-react";
+import { Menu, ChevronLeft, ChevronRight, Download, Sun, Moon, Clock, LogOut } from "lucide-react";
 import { generateMonthlyPDF } from "@/lib/generatePDF";
 import { toast } from "sonner";
 
 export default function Home() {
   const { mesAtual, setMesAtual, meses, metaRefugo } = useDashboard();
   const { theme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
   const [modalConfig, setModalConfig] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [exportandoPDF, setExportandoPDF] = useState(false);
@@ -145,6 +147,33 @@ export default function Home() {
                 className="p-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
               >
                 {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
+
+              {/* Usuário logado + Logout */}
+              <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-gray-200">
+                <div className="text-right">
+                  <p className="text-xs font-semibold text-gray-700 leading-none">{user?.nome}</p>
+                  <p className="text-[10px] text-gray-400 capitalize">{user?.role}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    logout();
+                    toast.success("Sessão encerrada com sucesso.");
+                  }}
+                  title="Sair do sistema"
+                  className="p-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Logout mobile (só ícone) */}
+              <button
+                onClick={() => { logout(); toast.success("Sessão encerrada."); }}
+                title="Sair"
+                className="sm:hidden p-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
               </button>
             </div>
           </div>
