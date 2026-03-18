@@ -119,14 +119,7 @@ export default function Home() {
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Relógio */}
-              <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-gray-50 text-xs text-gray-600">
-                <Clock className="w-3.5 h-3.5 text-gray-400" />
-                <span className="font-medium capitalize">{dataFormatada}</span>
-                <span className="text-gray-400">|</span>
-                <span className="font-mono font-semibold text-gray-700 tabular-nums">{horaFormatada}</span>
-              </div>
-
+              {/* Exportar PDF */}
               <button
                 onClick={handleExportPDF}
                 disabled={exportandoPDF}
@@ -136,6 +129,14 @@ export default function Home() {
                 <Download className="w-4 h-4" />
                 <span className="hidden sm:inline">Exportar PDF</span>
               </button>
+
+              {/* Relógio */}
+              <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-gray-50 text-xs text-gray-600">
+                <Clock className="w-3.5 h-3.5 text-gray-400" />
+                <span className="font-medium capitalize">{dataFormatada}</span>
+                <span className="text-gray-400">|</span>
+                <span className="font-mono font-semibold text-gray-700 tabular-nums">{horaFormatada}</span>
+              </div>
 
               {/* Toggle modo claro/escuro */}
               <button
@@ -171,6 +172,12 @@ export default function Home() {
           <TabelaRegistros />
         </div>
 
+        {/* Rodapé */}
+        <footer className="border-t border-gray-200 bg-white px-4 lg:px-6 py-3 mt-auto">
+          <p className="text-center text-xs text-gray-400 font-medium tracking-wide">
+            Controle de Refugos &mdash; 2026 &mdash; Implatec Perfis Plásticos ® &mdash; Todos os direitos reservados.
+          </p>
+        </footer>
 
       </main>
 
