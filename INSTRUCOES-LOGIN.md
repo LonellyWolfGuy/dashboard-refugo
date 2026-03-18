@@ -1,196 +1,135 @@
-# 🔐 Sistema de Login — Guia de Atualização
+# 🔐 Guia de Instalação do Login — Supabase + Vercel
 
-## O que foi adicionado
-
-- Tela de login com logo da Implatec (fundo branco)
-- Autenticação JWT com senha criptografada (bcrypt)
-- Tabela `users` no banco de dados PostgreSQL
-- Proteção de todas as rotas da API
-- Botão de logout no cabeçalho com nome do usuário logado
-- Gerenciamento de usuários via API (somente admin)
-- Scripts de migração e criação de admin
+> Tempo estimado: 10 a 15 minutos  
+> Sem linha de comando, sem servidor — tudo pelo painel.
 
 ---
 
-## 📋 Passo a Passo para Atualizar
+## O que foi adicionado ao projeto
 
-### 1. Substitua os arquivos do projeto
-
-Copie os arquivos desta pasta para o seu projeto, substituindo os existentes:
-
-```
-client/src/App.tsx               ← atualizado
-client/src/pages/Home.tsx        ← atualizado
-client/src/pages/LoginPage.tsx   ← NOVO
-client/src/contexts/AuthContext.tsx ← NOVO
-client/public/logo.png           ← NOVO
-schema.ts                        ← atualizado (tabela users)
-index.ts                         ← atualizado (rotas auth)
-package.json                     ← atualizado (bcryptjs, jsonwebtoken)
-.env.example                     ← atualizado (JWT_SECRET)
-scripts/migrate-auth.ts          ← NOVO
-scripts/create-admin.ts          ← NOVO
-```
+- Tela de login com logo da Implatec (fundo branco, campo e-mail + senha)
+- Autenticação segura via Supabase Auth (senha criptografada pelo próprio Supabase)
+- Botão de logout no cabeçalho com nome e e-mail do usuário logado
+- Sessão que se mantém ao fechar e reabrir o navegador
+- Proteção completa: ninguém acessa o dashboard sem fazer login
 
 ---
 
-### 2. Instale as novas dependências
+## PARTE 1 — Configurar o Supabase
 
-```bash
-pnpm install
-```
+### Passo 1 — Ativar autenticação por e-mail
 
-> Isso instala `bcryptjs`, `jsonwebtoken`, `@types/bcryptjs` e `@types/jsonwebtoken`.
-
----
-
-### 3. Configure o .env
-
-Copie o `.env.example` para `.env` (se ainda não existir) e adicione a variável:
-
-```bash
-# Gere uma chave segura com:
-node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
-```
-
-Adicione ao seu `.env`:
-
-```env
-JWT_SECRET=cole-aqui-a-chave-gerada-acima
-```
-
-> ⚠️ Em produção (Railway), adicione essa variável também nas **variáveis de ambiente do serviço**.
+1. Acesse supabase.com e abra seu projeto
+2. Menu lateral → Authentication → Providers
+3. Confirme que "Email" está HABILITADO
+4. IMPORTANTE: desmarque "Confirm email" para não precisar confirmar ao criar usuários
+   (Authentication → Providers → Email → desmarque "Confirm email")
 
 ---
 
-### 4. Execute a migração do banco de dados
+### Passo 2 — Proteger os dados (copie e execute no SQL Editor)
 
-```bash
-pnpm db:migrate
-```
+1. Menu lateral → SQL Editor → + New query
+2. Cole o código abaixo e clique em Run (▶️):
 
-Isso cria a tabela `users` no PostgreSQL. Você verá:
+    ALTER TABLE app_data ENABLE ROW LEVEL SECURITY;
 
-```
-✅  Tabela 'users' criada (ou já existia).
-👉  Agora execute: pnpm create-admin
-```
+    CREATE POLICY "Leitura autenticada"
+      ON app_data FOR SELECT
+      USING (auth.role() = 'authenticated');
 
----
+    CREATE POLICY "Escrita autenticada"
+      ON app_data FOR ALL
+      USING (auth.role() = 'authenticated');
 
-### 5. Crie o usuário administrador
-
-Antes de executar, abra o arquivo `scripts/create-admin.ts` e personalize:
-
-```ts
-const ADMIN_USERNAME = "admin";        // login de acesso
-const ADMIN_SENHA    = "Implatec@2026"; // ALTERE para sua senha
-const ADMIN_NOME     = "Administrador";
-```
-
-Depois execute:
-
-```bash
-pnpm create-admin
-```
-
-Você verá:
-
-```
-✅  Usuário 'admin' criado com sucesso.
-
-   Login  : admin
-   Senha  : Implatec@2026
-   Perfil : admin
-```
+Isso garante que os dados só ficam acessíveis após o login.
 
 ---
 
-### 6. Inicie o servidor
+### Passo 3 — Criar usuários de acesso
 
-```bash
-pnpm dev
-```
+1. Supabase → Authentication → Users
+2. Clique em "+ Add user" → "Create new user"
+3. Preencha o e-mail e a senha
+4. Clique em "Create User"
 
-Acesse `http://localhost:3000` — a tela de login será exibida.
+Repita para cada pessoa que precisar de acesso.
 
----
-
-## 👥 Gerenciar Usuários
-
-### Criar novo usuário (via API)
-
-```bash
-curl -X POST http://localhost:3001/api/users \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer SEU_TOKEN_JWT" \
-  -d '{
-    "username": "joao",
-    "password": "senha123",
-    "nome": "João Silva",
-    "role": "viewer"
-  }'
-```
-
-### Roles disponíveis
-
-| Role     | Permissão                                |
-|----------|------------------------------------------|
-| `admin`  | Acesso total + gerenciamento de usuários |
-| `viewer` | Acesso ao dashboard (somente leitura)    |
-
-### Resetar senha de um usuário
-
-```bash
-curl -X PATCH http://localhost:3001/api/users/ID_DO_USUARIO \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer SEU_TOKEN_JWT" \
-  -d '{"password": "nova-senha"}'
-```
-
-### Desativar um usuário (sem excluir)
-
-```bash
-curl -X PATCH http://localhost:3001/api/users/ID_DO_USUARIO \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer SEU_TOKEN_JWT" \
-  -d '{"ativo": false}'
-```
+Para desativar um usuário: Authentication → Users → clique no usuário → "Ban user"
+Para alterar senha: clique no usuário → altere o campo Password → "Update User"
 
 ---
 
-## 🚀 Deploy no Railway
+## PARTE 2 — Configurar o Vercel
 
-1. Faça o build antes do deploy:
-   ```bash
-   pnpm build
-   ```
+### Passo 4 — Adicionar variáveis de ambiente
 
-2. Adicione `JWT_SECRET` nas variáveis de ambiente do Railway:
-   - Acesse seu projeto → **Variables** → adicione `JWT_SECRET`
+1. vercel.com → abra seu projeto → Settings → Environment Variables
+2. Adicione estas duas variáveis (marque Production + Preview + Development):
 
-3. Após o deploy, execute a migração e crie o admin **uma única vez** apontando para o banco de produção:
-   ```bash
-   DATABASE_URL=postgresql://... pnpm db:migrate
-   DATABASE_URL=postgresql://... pnpm create-admin
-   ```
+   VITE_SUPABASE_URL  →  https://xxxx.supabase.co
+   VITE_SUPABASE_KEY  →  eyJ... (chave anon/public)
+
+Onde encontrar esses valores no Supabase:
+→ Settings → API → "Project URL" e "anon public"
 
 ---
 
-## 🔒 Segurança
+### Passo 5 — Substituir os arquivos do projeto
 
-- Senhas armazenadas com **bcrypt** (salt rounds: 12)
-- Tokens JWT com expiração de **8 horas**
-- Todas as rotas `/api/entries`, `/api/summaries`, `/api/metas` e `/api/analytics` requerem autenticação
-- Apenas usuários com `role: "admin"` podem gerenciar outros usuários
+Substitua no seu repositório:
+
+  client/src/App.tsx                     (atualizado)
+  client/src/pages/Home.tsx              (atualizado)
+  client/src/pages/LoginPage.tsx         (NOVO)
+  client/src/contexts/AuthContext.tsx    (NOVO)
+  client/src/contexts/DashboardContext.tsx (atualizado)
+  client/src/lib/supabase.ts             (NOVO)
+  client/public/logo.png                 (NOVO)
 
 ---
 
-## ❓ Recuperar acesso (esqueci a senha do admin)
+### Passo 6 — Fazer o deploy
 
-Execute novamente o script de criação (ele atualiza a senha se o usuário já existir):
+O Vercel detecta automaticamente quando você commita no GitHub/GitLab e faz o deploy.
 
-```bash
-# Edite a ADMIN_SENHA em scripts/create-admin.ts e execute:
-pnpm create-admin
-```
+Para acionar manualmente:
+  Vercel → seu projeto → Deployments → ... → Redeploy
+
+Após o deploy, acesse a URL — a tela de login aparecerá.
+
+---
+
+## PARTE 3 — Teste local (opcional)
+
+Crie o arquivo .env.local na raiz do projeto:
+
+  VITE_SUPABASE_URL=https://xxxx.supabase.co
+  VITE_SUPABASE_KEY=eyJ...sua-chave-anon...
+
+Execute:
+  pnpm install
+  pnpm dev
+
+Acesse http://localhost:3000
+
+---
+
+## Perguntas frequentes
+
+Esqueceu a senha?
+→ Supabase → Authentication → Users → clique no usuário → "Send password recovery"
+  Um e-mail de redefinição será enviado automaticamente.
+
+Como mudar a senha de um usuário?
+→ Authentication → Users → clique no usuário → altere Password → "Update User"
+
+Posso ter vários usuários?
+→ Sim, sem limite. Crie quantos quiser em Authentication → Users.
+
+A sessão expira?
+→ Após 1 hora de inatividade (renovada automaticamente se estiver usando).
+  Para alterar: Authentication → Settings → JWT expiry.
+
+Deu erro "Invalid login credentials"?
+→ Verifique e-mail e senha. Se acabou de criar o usuário, aguarde alguns segundos.

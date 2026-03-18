@@ -1,4 +1,4 @@
-import { pgTable, text, numeric, timestamp, pgEnum, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, numeric, timestamp, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -15,11 +15,11 @@ export const statusEnum = pgEnum("status_refugo", ["ok", "alerta", "critico"]);
 
 export const entries = pgTable("entries", {
   id: text("id").primaryKey(),
-  date: text("date").notNull(),           // "YYYY-MM-DD"
-  month: text("month").notNull(),         // "YYYY-MM"
+  date: text("date").notNull(),
+  month: text("month").notNull(),
   producao: numeric("producao", { precision: 10, scale: 2 }).notNull(),
   refugo: numeric("refugo", { precision: 10, scale: 2 }).notNull(),
-  perda: numeric("perda", { precision: 6, scale: 2 }).notNull(), // %
+  perda: numeric("perda", { precision: 6, scale: 2 }).notNull(),
   turno: turnoEnum("turno").default("GERAL"),
   descricao: text("descricao"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -27,19 +27,8 @@ export const entries = pgTable("entries", {
 });
 
 export const metas = pgTable("metas", {
-  month: text("month").primaryKey(),      // "YYYY-MM"
+  month: text("month").primaryKey(),
   metaPerda: numeric("meta_perda", { precision: 6, scale: 2 }).notNull().default("2.00"),
-});
-
-export const users = pgTable("users", {
-  id: text("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
-  nome: text("nome").notNull(),
-  role: text("role").notNull().default("viewer"), // "admin" | "viewer"
-  ativo: boolean("ativo").notNull().default(true),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // =============================================================================
@@ -69,5 +58,3 @@ export type Entry = typeof entries.$inferSelect;
 export type InsertEntry = z.infer<typeof insertEntrySchema>;
 export type Meta = typeof metas.$inferSelect;
 export type InsertMeta = z.infer<typeof insertMetaSchema>;
-export type User = typeof users.$inferSelect;
-export type InsertUser = typeof users.$inferInsert;

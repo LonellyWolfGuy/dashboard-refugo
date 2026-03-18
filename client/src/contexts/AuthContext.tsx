@@ -1,87 +1,79 @@
 // AuthContext.tsx
-// Gerencia o estado de autenticação global do frontend
+// Autenticação via Supabase Auth — sem backend próprio necessário.
+// O Supabase gerencia sessões, tokens JWT e segurança automaticamente.
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { Session } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 
 export interface AuthUser {
   id: string;
-  username: string;
+  email: string;
   nome: string;
-  role: string;
 }
 
 interface AuthContextType {
   user: AuthUser | null;
-  token: string | null;
+  session: Session | null;
   loading: boolean;
-  login: (username: string, password: string) => Promise<void>;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "";
-const TOKEN_KEY = "dashboard_refugo_token";
+function sessionToUser(session: Session | null): AuthUser | null {
+  if (!session?.user) return null;
+  const u = session.user;
+  return {
+    id: u.id,
+    email: u.email ?? "",
+    nome: (u.user_metadata?.nome as string) || u.email?.split("@")[0] || "Usuário",
+  };
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
   const [loading, setLoading] = useState(true);
 
-  // Valida token salvo ao iniciar
   useEffect(() => {
-    async function checkToken() {
-      const saved = localStorage.getItem(TOKEN_KEY);
-      if (!saved) { setLoading(false); return; }
-
-      try {
-        const res = await fetch(`${API_BASE}/api/auth/me`, {
-          headers: { Authorization: `Bearer ${saved}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data);
-          setToken(saved);
-        } else {
-          localStorage.removeItem(TOKEN_KEY);
-          setToken(null);
-        }
-      } catch {
-        localStorage.removeItem(TOKEN_KEY);
-        setToken(null);
-      } finally {
-        setLoading(false);
-      }
-    }
-    checkToken();
-  }, []);
-
-  async function login(username: string, password: string) {
-    const res = await fetch(`${API_BASE}/api/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
+    // Carrega a sessão ativa assim que o app inicia
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setUser(sessionToUser(data.session));
+      setLoading(false);
     });
 
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.error ?? "Erro ao fazer login");
-    }
+    // Escuta mudanças de login/logout em tempo real
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+      setUser(sessionToUser(newSession));
+      setLoading(false);
+    });
 
-    const data = await res.json();
-    localStorage.setItem(TOKEN_KEY, data.token);
-    setToken(data.token);
-    setUser(data.user);
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  async function login(email: string, password: string) {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      if (error.message.includes("Invalid login credentials")) {
+        throw new Error("E-mail ou senha incorretos.");
+      }
+      if (error.message.includes("Email not confirmed")) {
+        throw new Error("Confirme seu e-mail antes de acessar.");
+      }
+      throw new Error(error.message);
+    }
   }
 
-  function logout() {
-    localStorage.removeItem(TOKEN_KEY);
-    setToken(null);
-    setUser(null);
+  async function logout() {
+    await supabase.auth.signOut();
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, session, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

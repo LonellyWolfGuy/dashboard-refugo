@@ -153,13 +153,10 @@ export default function Home() {
               <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-gray-200">
                 <div className="text-right">
                   <p className="text-xs font-semibold text-gray-700 leading-none">{user?.nome}</p>
-                  <p className="text-[10px] text-gray-400 capitalize">{user?.role}</p>
+                  <p className="text-[10px] text-gray-400 truncate max-w-[120px]">{user?.email}</p>
                 </div>
                 <button
-                  onClick={() => {
-                    logout();
-                    toast.success("Sessão encerrada com sucesso.");
-                  }}
+                  onClick={async () => { await logout(); toast.success("Sessão encerrada com sucesso."); }}
                   title="Sair do sistema"
                   className="p-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
                 >
@@ -169,7 +166,7 @@ export default function Home() {
 
               {/* Logout mobile (só ícone) */}
               <button
-                onClick={() => { logout(); toast.success("Sessão encerrada."); }}
+                onClick={async () => { await logout(); toast.success("Sessão encerrada."); }}
                 title="Sair"
                 className="sm:hidden p-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
               >

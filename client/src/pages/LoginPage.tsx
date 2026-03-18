@@ -1,13 +1,12 @@
-// LoginPage.tsx
-// Tela de login com logo da Implatec e fundo branco
+// LoginPage.tsx — Tela de login com logo Implatec + Supabase Auth
 
 import { useState, FormEvent } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Eye, EyeOff, LogIn, Lock, User } from "lucide-react";
+import { Eye, EyeOff, LogIn, Lock, Mail } from "lucide-react";
 
 export default function LoginPage() {
   const { login } = useAuth();
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -15,14 +14,13 @@ export default function LoginPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!username.trim() || !password) return;
-
+    if (!email.trim() || !password) return;
     setError("");
     setLoading(true);
     try {
-      await login(username.trim(), password);
+      await login(email.trim(), password);
     } catch (err: any) {
-      setError(err.message ?? "Usuário ou senha incorretos");
+      setError(err.message ?? "E-mail ou senha incorretos.");
     } finally {
       setLoading(false);
     }
@@ -31,7 +29,8 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        {/* Card principal */}
+
+        {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
 
           {/* Área da Logo */}
@@ -39,7 +38,7 @@ export default function LoginPage() {
             <img
               src="/logo.png"
               alt="Implatec Perfis Plásticos"
-              className="w-56 object-contain"
+              className="w-56 object-contain select-none"
               draggable={false}
             />
             <p className="mt-4 text-sm text-gray-500 font-medium tracking-wide">
@@ -54,21 +53,22 @@ export default function LoginPage() {
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Usuário */}
+
+              {/* E-mail */}
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                  Usuário
+                  E-mail
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    <User className="w-4 h-4" />
+                    <Mail className="w-4 h-4" />
                   </span>
                   <input
-                    type="text"
-                    autoComplete="username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Digite seu usuário"
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="seu@email.com"
                     disabled={loading}
                     className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-800 placeholder-gray-400 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition disabled:opacity-50"
                     required
@@ -90,7 +90,7 @@ export default function LoginPage() {
                     autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Digite sua senha"
+                    placeholder="Sua senha"
                     disabled={loading}
                     className="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-800 placeholder-gray-400 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition disabled:opacity-50"
                     required
@@ -106,7 +106,7 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {/* Erro */}
+              {/* Mensagem de erro */}
               {error && (
                 <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
                   <Lock className="w-4 h-4 flex-shrink-0" />
@@ -114,10 +114,10 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* Botão */}
+              {/* Botão entrar */}
               <button
                 type="submit"
-                disabled={loading || !username || !password}
+                disabled={loading || !email || !password}
                 className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-green-700 hover:bg-green-800 text-white font-semibold text-sm rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed mt-2"
               >
                 {loading ? (
@@ -130,6 +130,7 @@ export default function LoginPage() {
                 )}
                 {loading ? "Entrando..." : "Entrar"}
               </button>
+
             </form>
           </div>
         </div>

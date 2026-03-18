@@ -1,12 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 import { DailyRecord, MonthData, DADOS_INICIAIS, META_REFUGO_PERCENT } from "@/lib/initialData";
-
-// Variáveis injetadas pelo Vite no build — configure no painel do Vercel
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY as string;
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 interface DashboardContextType {
   meses: MonthData[];
