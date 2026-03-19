@@ -71,7 +71,7 @@ export default function TabelaRegistros() {
     setEditState({ id: r.id, data: r.data, producao: r.producao.toString(), refugo: r.refugo.toString() });
   }
 
-  function salvarEdicao() {
+  async function salvarEdicao() {
     if (!editState.id) return;
     const producao = parseFloat(editState.producao.replace(",", "."));
     const refugo = parseFloat(editState.refugo.replace(",", "."));
@@ -83,13 +83,17 @@ export default function TabelaRegistros() {
       toast.error("Os valores não podem ser negativos.");
       return;
     }
-    editarRegistro(mesAtual, editState.id, { data: editState.data, producao, refugo });
-    setEditState(emptyEdit);
-    toast.success("Registro atualizado com sucesso.");
+    try {
+      await editarRegistro(mesAtual, editState.id, { data: editState.data, producao, refugo });
+      setEditState(emptyEdit);
+      toast.success("Registro atualizado com sucesso.");
+    } catch {
+      toast.error("Erro ao salvar. Verifique a conexão e tente novamente.");
+    }
   }
 
   // ── Novo registro ──────────────────────────────────────────────────────────
-  function salvarNovo() {
+  async function salvarNovo() {
     const producao = parseFloat(novoProducao.replace(",", "."));
     const refugo = parseFloat(novoRefugo.replace(",", "."));
 
@@ -117,17 +121,19 @@ export default function TabelaRegistros() {
       return;
     }
 
-    adicionarRegistro(destino.mes, { data: novoData, producao, refugo });
-
-    setNovoData("");
-    setNovoProducao("");
-    setNovoRefugo("");
-    setNovoAberto(false);
-
-    if (dataEmOutroMes) {
-      toast.success(`Registro adicionado em ${nomeMesDestino}.`);
-    } else {
-      toast.success("Registro adicionado com sucesso.");
+    try {
+      await adicionarRegistro(destino.mes, { data: novoData, producao, refugo });
+      setNovoData("");
+      setNovoProducao("");
+      setNovoRefugo("");
+      setNovoAberto(false);
+      if (dataEmOutroMes) {
+        toast.success(`Registro adicionado em ${nomeMesDestino}.`);
+      } else {
+        toast.success("Registro adicionado com sucesso.");
+      }
+    } catch {
+      toast.error("Erro ao salvar. Verifique a conexão e tente novamente.");
     }
   }
 
@@ -144,20 +150,28 @@ export default function TabelaRegistros() {
     setModalMotivoAberto(true);
   }
 
-  function salvarMotivos(motivos: RefugoMotivo[]) {
+  async function salvarMotivos(motivos: RefugoMotivo[]) {
     if (!registroSelecionado) return;
-    editarRegistro(mesAtual, registroSelecionado.id, {
-      data: registroSelecionado.data,
-      producao: registroSelecionado.producao,
-      refugo: registroSelecionado.refugo,
-      motivos,
-    });
-    setRegistroSelecionado(null);
+    try {
+      await editarRegistro(mesAtual, registroSelecionado.id, {
+        data: registroSelecionado.data,
+        producao: registroSelecionado.producao,
+        refugo: registroSelecionado.refugo,
+        motivos,
+      });
+      setRegistroSelecionado(null);
+    } catch {
+      toast.error("Erro ao salvar motivos. Tente novamente.");
+    }
   }
 
-  function handleExcluir(id: string) {
-    excluirRegistro(mesAtual, id);
-    toast.success("Registro excluído.");
+  async function handleExcluir(id: string) {
+    try {
+      await excluirRegistro(mesAtual, id);
+      toast.success("Registro excluído.");
+    } catch {
+      toast.error("Erro ao excluir. Tente novamente.");
+    }
   }
 
   function abrirNovo() {

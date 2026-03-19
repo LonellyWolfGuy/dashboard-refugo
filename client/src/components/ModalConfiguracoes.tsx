@@ -17,7 +17,7 @@ export default function ModalConfiguracoes({ onClose }: ModalConfiguracoesProps)
   const [novoMotivo, setNovoMotivo] = useState("");
   const [abaAtiva, setAbaAtiva] = useState<"meta" | "motivos" | "dados">("meta");
 
-  function salvarMeta() {
+  async function salvarMeta() {
     const val = parseFloat(novaMeta.replace(",", "."));
     if (isNaN(val) || val <= 0 || val > 100) {
       toast.error("Meta deve ser um valor entre 0 e 100.");
@@ -61,7 +61,7 @@ export default function ModalConfiguracoes({ onClose }: ModalConfiguracoesProps)
     window.location.reload();
   }
 
-  function adicionarNovoMotivo() {
+  async function adicionarNovoMotivo() {
     if (!novoMotivo.trim()) {
       toast.error("Digite um motivo válido.");
       return;
@@ -70,15 +70,23 @@ export default function ModalConfiguracoes({ onClose }: ModalConfiguracoesProps)
       toast.error("Este motivo já existe.");
       return;
     }
-    adicionarMotivo(novoMotivo);
-    setNovoMotivo("");
-    toast.success("Motivo adicionado com sucesso.");
+    try {
+      await adicionarMotivo(novoMotivo);
+      setNovoMotivo("");
+      toast.success("Motivo adicionado com sucesso.");
+    } catch {
+      toast.error("Erro ao adicionar motivo. Tente novamente.");
+    }
   }
 
-  function removerMotivoConfirm(motivo: string) {
+  async function removerMotivoConfirm(motivo: string) {
     if (!confirm(`Deseja remover o motivo "${motivo}"?`)) return;
-    removerMotivo(motivo);
-    toast.success("Motivo removido com sucesso.");
+    try {
+      await removerMotivo(motivo);
+      toast.success("Motivo removido com sucesso.");
+    } catch {
+      toast.error("Erro ao remover motivo. Tente novamente.");
+    }
   }
 
   return (
