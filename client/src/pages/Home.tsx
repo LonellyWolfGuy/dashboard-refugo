@@ -19,7 +19,7 @@ import { generateMonthlyPDF } from "@/lib/generatePDF";
 import { toast } from "sonner";
 
 export default function Home() {
-  const { mesAtual, setMesAtual, meses, metaRefugo, salvarTudo, salvando, getMesData } = useDashboard();
+  const { mesAtual, setMesAtual, meses, metaRefugo, salvarTudo, getMesData } = useDashboard();
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
   const [modalConfig, setModalConfig] = useState(false);
@@ -157,18 +157,15 @@ export default function Home() {
                 </div>
                 <button
                   onClick={async () => {
-                    toast.loading("Salvando dados...", { id: "logout-save" });
-                    try {
-                      await salvarTudo();
-                      toast.success("Dados salvos!", { id: "logout-save" });
-                    } catch {
-                      toast.error("Falha ao salvar. Saindo mesmo assim.", { id: "logout-save" });
-                    }
+                    toast.loading("Saindo...", { id: "logout-save" });
+                    await salvarTudo().catch(() => {
+                      // save já ocorre em tempo real a cada ação — falha aqui não é crítica
+                    });
+                    toast.dismiss("logout-save");
                     await logout();
                   }}
-                  disabled={salvando}
                   title="Sair do sistema"
-                  className="p-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors disabled:opacity-50"
+                  className="p-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
@@ -177,18 +174,13 @@ export default function Home() {
               {/* Logout mobile (só ícone) */}
               <button
                 onClick={async () => {
-                  toast.loading("Salvando dados...", { id: "logout-save-mobile" });
-                  try {
-                    await salvarTudo();
-                    toast.success("Dados salvos!", { id: "logout-save-mobile" });
-                  } catch {
-                    toast.error("Falha ao salvar. Saindo mesmo assim.", { id: "logout-save-mobile" });
-                  }
+                  toast.loading("Saindo...", { id: "logout-save-mobile" });
+                  await salvarTudo().catch(() => {});
+                  toast.dismiss("logout-save-mobile");
                   await logout();
                 }}
-                disabled={salvando}
                 title="Sair"
-                className="sm:hidden p-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors disabled:opacity-50"
+                className="sm:hidden p-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
               >
                 <LogOut className="w-4 h-4" />
               </button>
