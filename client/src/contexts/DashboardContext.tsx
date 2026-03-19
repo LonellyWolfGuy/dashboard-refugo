@@ -34,12 +34,24 @@ function gerarId(): string {
 }
 
 async function lerSupabase(key: string): Promise<unknown> {
-  const { data } = await supabase.from("app_data").select("value").eq("key", key).single();
+  const { data, error } = await supabase.from("app_data").select("value").eq("key", key).single();
+  if (error && error.code !== "PGRST116") {
+    // PGRST116 = row not found (esperado na primeira execução)
+    console.error(`[Supabase] Erro ao ler "${key}":`, error.message, error.code);
+    throw new Error(error.message);
+  }
   return data?.value ?? null;
 }
 
 async function salvarSupabase(key: string, value: unknown): Promise<void> {
-  await supabase.from("app_data").upsert({ key, value }, { onConflict: "key" });
+  const { error } = await supabase
+    .from("app_data")
+    .upsert({ key, value }, { onConflict: "key" });
+
+  if (error) {
+    console.error(`[Supabase] Erro ao salvar "${key}":`, error.message, error.code);
+    throw new Error(error.message);
+  }
 }
 
 export function DashboardProvider({ children }: { children: React.ReactNode }) {
@@ -49,42 +61,55 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [metaRefugo, setMetaRefugoState] = useState<number>(META_REFUGO_PERCENT);
   const [motivos, setMotivosState] = useState<string[]>(MOTIVOS_PADRAO);
   const [carregando, setCarregando] = useState(true);
+
+  // Ref que guarda se o carregamento inicial terminou E o estado foi aplicado
   const dadosCarregados = useRef(false);
 
   // Carrega dados do Supabase ao iniciar
   useEffect(() => {
     async function carregar() {
       try {
-        const [dados, config] = await Promise.all([
+        const [dadosMeses, dadosConfig] = await Promise.all([
           lerSupabase("meses"),
           lerSupabase("config"),
         ]);
-        if (Array.isArray(dados) && dados.length > 0) setMeses(dados as MonthData[]);
-        if (config && typeof config === "object") {
-          const c = config as { metaRefugo?: number; motivos?: string[] };
+
+        if (Array.isArray(dadosMeses) && dadosMeses.length > 0) {
+          setMeses(dadosMeses as MonthData[]);
+        }
+        if (dadosConfig && typeof dadosConfig === "object") {
+          const c = dadosConfig as { metaRefugo?: number; motivos?: string[] };
           if (typeof c.metaRefugo === "number") setMetaRefugoState(c.metaRefugo);
           if (Array.isArray(c.motivos)) setMotivosState(c.motivos);
         }
-      } catch {
-        // continua com dados iniciais se Supabase não responder
+      } catch (err) {
+        console.warn("[DashboardContext] Carregamento do Supabase falhou, usando dados iniciais:", err);
       } finally {
-        dadosCarregados.current = true;
-        setCarregando(false);
+        // Aguarda o próximo tick para garantir que os setStates acima foram aplicados
+        // antes de habilitar os effects de persistência
+        setTimeout(() => {
+          dadosCarregados.current = true;
+          setCarregando(false);
+        }, 0);
       }
     }
     carregar();
   }, []);
 
-  // Salva meses no Supabase sempre que mudam
+  // Salva meses no Supabase sempre que mudam (após carregamento inicial)
   useEffect(() => {
     if (!dadosCarregados.current) return;
-    salvarSupabase("meses", meses).catch(() => {});
+    salvarSupabase("meses", meses).catch((err) => {
+      console.error("[DashboardContext] Falha ao persistir meses:", err);
+    });
   }, [meses]);
 
-  // Salva config no Supabase sempre que muda
+  // Salva config no Supabase sempre que muda (após carregamento inicial)
   useEffect(() => {
     if (!dadosCarregados.current) return;
-    salvarSupabase("config", { metaRefugo, motivos }).catch(() => {});
+    salvarSupabase("config", { metaRefugo, motivos }).catch((err) => {
+      console.error("[DashboardContext] Falha ao persistir config:", err);
+    });
   }, [metaRefugo, motivos]);
 
   const setMetaRefugo = useCallback((meta: number) => setMetaRefugoState(meta), []);
