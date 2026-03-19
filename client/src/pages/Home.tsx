@@ -19,7 +19,7 @@ import { generateMonthlyPDF } from "@/lib/generatePDF";
 import { toast } from "sonner";
 
 export default function Home() {
-  const { mesAtual, setMesAtual, meses, metaRefugo } = useDashboard();
+  const { mesAtual, setMesAtual, meses, metaRefugo, salvarTudo, salvando, getMesData } = useDashboard();
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
   const [modalConfig, setModalConfig] = useState(false);
@@ -42,8 +42,8 @@ export default function Home() {
   async function handleExportPDF() {
     try {
       setExportandoPDF(true);
-      const registrosMes = meses[mesAtual - 1]?.registros || [];
-      await generateMonthlyPDF(mesAtual, registrosMes, metaRefugo);
+      const mesData = getMesData(mesAtual);
+      await generateMonthlyPDF(mesAtual, mesData.registros, metaRefugo);
       toast.success(`Relatório de ${MESES_NOMES[mesAtual - 1]} exportado com sucesso!`);
     } catch (error) {
       console.error(error);
@@ -156,9 +156,19 @@ export default function Home() {
                   <p className="text-[10px] text-gray-400 truncate max-w-[120px]">{user?.email}</p>
                 </div>
                 <button
-                  onClick={async () => { await logout(); toast.success("Sessão encerrada com sucesso."); }}
+                  onClick={async () => {
+                    toast.loading("Salvando dados...", { id: "logout-save" });
+                    try {
+                      await salvarTudo();
+                      toast.success("Dados salvos!", { id: "logout-save" });
+                    } catch {
+                      toast.error("Falha ao salvar. Saindo mesmo assim.", { id: "logout-save" });
+                    }
+                    await logout();
+                  }}
+                  disabled={salvando}
                   title="Sair do sistema"
-                  className="p-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+                  className="p-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors disabled:opacity-50"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
@@ -166,9 +176,19 @@ export default function Home() {
 
               {/* Logout mobile (só ícone) */}
               <button
-                onClick={async () => { await logout(); toast.success("Sessão encerrada."); }}
+                onClick={async () => {
+                  toast.loading("Salvando dados...", { id: "logout-save-mobile" });
+                  try {
+                    await salvarTudo();
+                    toast.success("Dados salvos!", { id: "logout-save-mobile" });
+                  } catch {
+                    toast.error("Falha ao salvar. Saindo mesmo assim.", { id: "logout-save-mobile" });
+                  }
+                  await logout();
+                }}
+                disabled={salvando}
                 title="Sair"
-                className="sm:hidden p-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+                className="sm:hidden p-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors disabled:opacity-50"
               >
                 <LogOut className="w-4 h-4" />
               </button>

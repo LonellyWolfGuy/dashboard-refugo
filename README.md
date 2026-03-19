@@ -6,23 +6,24 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript)](https://www.typescriptlang.org)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss)](https://tailwindcss.com)
 
-Sistema web para controle e análise de refugo industrial. Permite lançar registros diários de produção e refugo, visualizar tendências por mês e ano, analisar motivos de refugo e exportar relatórios em PDF — com dados compartilhados em tempo real entre todos os usuários via Supabase. O acesso é protegido por autenticação via Supabase Auth.
+Sistema web para controle e análise de refugo industrial. Permite lançar registros diários de produção e refugo, visualizar tendências por mês e ano, analisar motivos de refugo e exportar relatórios em PDF — com dados persistidos em tempo real no Supabase e acesso protegido por autenticação.
 
 ---
 
 ## ✨ Funcionalidades
 
-- **Login seguro** — tela de autenticação com e-mail e senha gerenciados pelo Supabase Auth
+- **Login seguro** — autenticação com e-mail e senha via Supabase Auth
 - **KPIs em tempo real** — total produzido, total refugo, percentual do mês e comparativo com a meta configurável
 - **Gráfico mensal** — barras empilhadas de produção × refugo com linha de meta
 - **Gráfico anual** — visão consolidada dos 12 meses do ano
 - **Análise por motivo** — gráfico de pizza e ranking dos principais motivos de refugo
-- **Lançamentos flexíveis** — adicionar, editar e excluir registros de qualquer data; ao digitar uma data de outro mês, o registro é automaticamente salvo no mês correto
-- **Motivos de refugo** — lista customizável de motivos vinculados a cada lançamento
-- **Exportação PDF** — relatório mensal gerado diretamente no navegador
-- **Tema claro/escuro** — alternância manual pelo botão no cabeçalho
+- **Lançamentos flexíveis** — adicionar, editar e excluir registros; ao digitar data de outro mês, o registro é salvo no mês correto automaticamente
+- **Motivos customizáveis** — lista de motivos configurável, vinculados a cada lançamento
+- **Exportação PDF completa** — relatório mensal com totais, tabela de registros e motivos gerado no navegador
+- **Persistência instantânea** — cada alteração é enviada ao Supabase imediatamente, sem aguardar ciclos do React
+- **Save garantido no logout** — ao clicar em Sair, todos os dados são sincronizados com o banco antes de encerrar a sessão
+- **Tema claro/escuro** — alternância manual pelo cabeçalho
 - **Responsivo** — funciona em desktop, tablet e celular
-- **Dados em nuvem** — todos os usuários compartilham os mesmos dados via Supabase em tempo real
 
 ---
 
@@ -48,7 +49,7 @@ O frontend comunica diretamente com o Supabase usando as variáveis `VITE_SUPABA
 dashboard-refugo/
 ├── client/
 │   ├── public/
-│   │   └── logo.png                    # Logo da Implatec (exibida na tela de login)
+│   │   └── logo.png                    # Logo da Implatec
 │   └── src/
 │       ├── components/
 │       │   ├── ui/                     # Componentes base (shadcn/ui)
@@ -62,7 +63,7 @@ dashboard-refugo/
 │       │   └── ModalMotivoRefugo.tsx   # Modal de motivos por lançamento
 │       ├── contexts/
 │       │   ├── AuthContext.tsx         # Estado de autenticação + Supabase Auth
-│       │   ├── DashboardContext.tsx    # Estado global + integração Supabase
+│       │   ├── DashboardContext.tsx    # Estado global + persistência instantânea no Supabase
 │       │   └── ThemeContext.tsx        # Controle de tema claro/escuro
 │       ├── lib/
 │       │   ├── supabase.ts             # Cliente Supabase compartilhado
@@ -71,12 +72,13 @@ dashboard-refugo/
 │       │   └── utils.ts                # Funções utilitárias
 │       └── pages/
 │           ├── Home.tsx                # Página principal (dashboard)
-│           ├── LoginPage.tsx           # Tela de login com logo Implatec
+│           ├── LoginPage.tsx           # Tela de login
 │           └── NotFound.tsx            # Página 404
 ├── server/
 │   └── index.ts                        # Servidor Express (uso local apenas)
 ├── shared/
 │   └── const.ts                        # Constantes compartilhadas
+├── supabase-setup.sql                  # Script SQL para configurar o banco
 ├── vercel.json                         # Configuração de deploy no Vercel
 ├── vite.config.ts                      # Configuração do Vite
 └── package.json
@@ -92,54 +94,39 @@ dashboard-refugo/
 
 1. Acesse [supabase.com](https://supabase.com) e abra seu projeto
 2. Vá em **SQL Editor → New query**
-3. Cole o bloco abaixo **completo** e clique em **Run (▶️)**:
+3. Cole o conteúdo do arquivo `supabase-setup.sql` (incluído no repositório) e clique em **Run (▶️)**
 
-```sql
--- 1. Cria a tabela de dados do dashboard
-CREATE TABLE app_data (
-  key TEXT PRIMARY KEY,
-  value JSONB
-);
+O script realiza automaticamente:
+- Cria a tabela `app_data` com coluna `value` do tipo `JSONB` e campo `updated_at` com atualização automática por trigger
+- Habilita Row Level Security (RLS)
+- Cria política permissiva para leitura e escrita
 
--- 2. Insere os registros iniciais vazios
-INSERT INTO app_data (key, value)
-VALUES ('meses', '[]'), ('config', '{}');
-
--- 3. Ativa a proteção por linha (RLS)
-ALTER TABLE app_data ENABLE ROW LEVEL SECURITY;
-
--- 4. Apenas usuários autenticados podem ler os dados
-CREATE POLICY "Leitura autenticada"
-  ON app_data FOR SELECT
-  USING (auth.role() = 'authenticated');
-
--- 5. Apenas usuários autenticados podem salvar os dados
-CREATE POLICY "Escrita autenticada"
-  ON app_data FOR ALL
-  USING (auth.role() = 'authenticated');
-```
-
-> ⚠️ **Importante:** execute sempre este bloco inteiro de uma vez. Rodar os passos separadamente pode causar erros, pois a proteção (RLS) depende da tabela já existir.
+> ⚠️ Se preferir restringir o acesso apenas a usuários autenticados, substitua a política no script por:
+> ```sql
+> CREATE POLICY "auth_only" ON app_data FOR ALL
+>   USING (auth.role() = 'authenticated')
+>   WITH CHECK (auth.role() = 'authenticated');
+> ```
 
 #### 1.2 Ativar autenticação por e-mail
 
 1. Vá em **Authentication → Providers**
 2. Confirme que **Email** está habilitado
-3. Desmarque **"Confirm email"** para não precisar confirmar ao criar usuários
+3. Desmarque **"Confirm email"** para não exigir confirmação ao criar usuários
 
-#### 1.4 Criar usuários de acesso
+#### 1.3 Criar usuários de acesso
 
 1. Vá em **Authentication → Users**
 2. Clique em **+ Add user → Create new user**
 3. Preencha e-mail e senha → **Create User**
 
-Repita para cada pessoa que precisar acessar o sistema. Para desativar um usuário sem excluí-lo: clique no usuário → **Ban user**.
+Repita para cada colaborador. Para desativar sem excluir: **clique no usuário → Ban user**.
 
-#### 1.5 Copiar as credenciais
+#### 1.4 Copiar as credenciais
 
 Em **Settings → API**, copie:
-- `Project URL` → será o valor de `VITE_SUPABASE_URL`
-- `anon public` → será o valor de `VITE_SUPABASE_KEY`
+- `Project URL` → valor de `VITE_SUPABASE_URL`
+- `anon public` → valor de `VITE_SUPABASE_KEY`
 
 ---
 
@@ -156,7 +143,7 @@ Em **Settings → API**, copie:
 
 4. Clique em **Deploy**
 
-O Vercel detecta automaticamente qualquer novo push no GitHub e republica em 1–2 minutos.
+O Vercel republica automaticamente a cada push no GitHub em 1–2 minutos.
 
 ---
 
@@ -170,40 +157,25 @@ O Vercel detecta automaticamente qualquer novo push no GitHub e republica em 1�
 ### Instalação
 
 ```bash
-# Clonar o repositório
 git clone https://github.com/seu-usuario/dashboard-refugo.git
 cd dashboard-refugo
-
-# Instalar dependências
 pnpm install
-
-# Criar arquivo de variáveis de ambiente
 cp .env.example .env.local
 # Editar .env.local com suas credenciais do Supabase
 ```
 
 ### Variáveis de ambiente
 
-Crie um arquivo `.env.local` na raiz do projeto:
-
 ```env
 VITE_SUPABASE_URL=https://xxxxxxxxxxx.supabase.co
 VITE_SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
-### Executar em desenvolvimento
+### Executar
 
 ```bash
-pnpm dev
-```
-
-Acesse [http://localhost:3000](http://localhost:3000)
-
-### Build para produção
-
-```bash
-# Build apenas do frontend (usado pelo Vercel)
-pnpm run build:vercel
+pnpm dev        # Desenvolvimento (http://localhost:3000)
+pnpm build      # Build de produção
 ```
 
 ---
@@ -212,17 +184,17 @@ pnpm run build:vercel
 
 O deploy é automático via GitHub + Vercel:
 
-1. Edite os arquivos na pasta local do projeto
+1. Edite os arquivos localmente
 2. Abra o **GitHub Desktop**
-3. Escreva uma descrição da mudança e clique em **Commit to main**
+3. Escreva uma descrição e clique em **Commit to main**
 4. Clique em **Push origin**
-5. O Vercel detecta e republica automaticamente em 1–2 minutos
+5. O Vercel republica automaticamente em 1–2 minutos
 
 ---
 
 ## 🔐 Gerenciamento de Usuários
 
-Todo o gerenciamento é feito diretamente no painel do Supabase, sem necessidade de código:
+Todo o gerenciamento é feito no painel do Supabase, sem código:
 
 | Ação | Caminho no Supabase |
 |---|---|
@@ -231,33 +203,36 @@ Todo o gerenciamento é feito diretamente no painel do Supabase, sem necessidade
 | Desativar usuário | Authentication → Users → clique no usuário → Ban user |
 | Reativar usuário | Authentication → Users → clique no usuário → Unban user |
 | Excluir usuário | Authentication → Users → clique no usuário → Delete user |
-| Enviar link de reset de senha | Authentication → Users → clique no usuário → Send password recovery |
+| Enviar reset de senha | Authentication → Users → clique no usuário → Send password recovery |
 
-> ⚠️ A sessão expira após 1 hora de inatividade e é renovada automaticamente enquanto o usuário estiver ativo. Para alterar esse tempo: **Authentication → Settings → JWT expiry**.
+> ⚠️ A sessão expira após 1 hora de inatividade e é renovada automaticamente enquanto o usuário estiver ativo. Para alterar: **Authentication → Settings → JWT expiry**.
 
 ---
 
 ## 🖥️ Interface
 
-### Cabeçalho (Header)
+### Cabeçalho
 
-O cabeçalho do dashboard contém da esquerda para a direita:
-
-- **Navegação de mês** — botões `‹` e `›` para alternar entre os meses
-- **Exportar PDF** — gera o relatório mensal em PDF (botão verde)
+- **Navegação de mês** — botões `‹` e `›` para alternar meses
+- **Exportar PDF** — gera relatório mensal completo (botão verde)
 - **Relógio** — data e hora em tempo real
-- **Modo escuro/claro** — alterna o tema da interface
-- **Usuário logado** — exibe o nome e e-mail, com botão de logout (🔓)
+- **Modo escuro/claro** — alterna o tema
+- **Usuário logado** — nome, e-mail e botão de logout com save automático
 
-### Rodapé (Footer)
+### Botão Sair
 
-```
-Controle de Refugos — 2026 — Implatec Perfis Plásticos ® — Todos os direitos reservados.
-```
+Ao clicar em **Sair**, a aplicação exibe `"Salvando dados..."`, realiza um flush completo de todos os dados no Supabase e só então encerra a sessão. Se o save falhar, a sessão é encerrada mesmo assim com aviso.
 
-### Tela de Login
+### Sidebar
 
-Exibe a logo da Implatec sobre fundo branco, com campos de e-mail e senha. Após autenticação bem-sucedida, o usuário é redirecionado automaticamente ao dashboard.
+Menu lateral com navegação por mês. Cada mês exibe um indicador colorido de status:
+
+| Cor | Significado |
+|---|---|
+| 🟢 Verde | % refugo ≤ 80% da meta |
+| 🟡 Âmbar | % refugo entre 80% e 100% da meta |
+| 🔴 Vermelho | % refugo acima da meta |
+| ⚪ Cinza | Sem registros |
 
 ---
 
@@ -271,12 +246,11 @@ Exibe a logo da Implatec sobre fundo branco, com campos de e-mail e senha. Após
 | Estilização | [Tailwind CSS 4](https://tailwindcss.com) |
 | Componentes | [shadcn/ui](https://ui.shadcn.com) + [Radix UI](https://radix-ui.com) |
 | Gráficos | [Recharts](https://recharts.org) |
-| Banco de dados | [Supabase](https://supabase.com) (PostgreSQL) |
+| Banco de dados | [Supabase](https://supabase.com) (PostgreSQL + JSONB) |
 | Autenticação | [Supabase Auth](https://supabase.com/docs/guides/auth) |
 | Roteamento | [Wouter](https://github.com/molefrog/wouter) |
 | Formulários | [React Hook Form](https://react-hook-form.com) + [Zod](https://zod.dev) |
 | PDF | [jsPDF](https://github.com/parallax/jsPDF) |
-| Animações | [Framer Motion](https://www.framer.com/motion) |
 | Notificações | [Sonner](https://sonner.emilkowal.ski) |
 | Hospedagem | [Vercel](https://vercel.com) |
 
@@ -318,21 +292,55 @@ interface MonthData {
 
 ### Estrutura no Supabase
 
-Os dados são armazenados na tabela `app_data` com duas linhas:
+Tabela `app_data` (PostgreSQL):
+
+| Coluna | Tipo | Descrição |
+|---|---|---|
+| `key` | `TEXT PRIMARY KEY` | Identificador do dado |
+| `value` | `JSONB` | Conteúdo serializado |
+| `updated_at` | `TIMESTAMPTZ` | Atualizado automaticamente por trigger |
+
+Linhas armazenadas:
 
 | key | value |
 |---|---|
-| `meses` | Array JSON de `MonthData[]` com todos os registros |
-| `config` | Objeto JSON com `{ metaRefugo: number, motivos: string[] }` |
+| `meses` | Array `MonthData[]` com todos os registros do ano |
+| `config` | Objeto `{ metaRefugo: number, motivos: string[] }` |
 
 ---
 
 ## ⚙️ Configurações da Aplicação
 
-Acessíveis pelo ícone de engrenagem (⚙️) na sidebar:
+Acessíveis pelo ícone ⚙️ na sidebar:
 
-- **Meta de refugo (%)** — percentual alvo. Registros acima da meta são destacados em vermelho, abaixo em verde
-- **Motivos de refugo** — lista customizável de motivos disponíveis ao lançar um registro
+- **Meta de refugo (%)** — percentual alvo. Registros acima da meta são destacados em vermelho
+- **Motivos de refugo** — lista customizável disponível ao lançar um registro
+
+---
+
+## 🔧 Detalhes de Implementação
+
+### Persistência instantânea (`DashboardContext.tsx`)
+
+Cada função de ação (`adicionarRegistro`, `editarRegistro`, `excluirRegistro`, `setMetaRefugo`, `adicionarMotivo`, `removerMotivo`) calcula o novo estado e dispara o `upsert` no Supabase **imediatamente**, sem depender do ciclo de re-render do React. Isso é possível porque o contexto mantém `useRef` espelhando os valores mais recentes do estado.
+
+```
+Usuário clica "Salvar"
+        │
+        ├── setMeses(novoEstado)      → atualiza a UI
+        └── salvarSupabase(novoEstado) → persiste imediatamente
+```
+
+### Save no logout (`Home.tsx`)
+
+O botão Sair executa `salvarTudo()` antes de `logout()`. A função `salvarTudo` faz um `Promise.all` dos dois `upsert` (meses + config) usando os valores das refs, garantindo que o snapshot mais recente seja gravado mesmo que algum save automático anterior tenha falhado.
+
+### Geração de PDF (`generatePDF.ts`)
+
+- Registros já chegam filtrados do contexto — não há re-filtragem interna que pudesse descartar dados
+- Datas lidas diretamente da string `YYYY-MM-DD` (sem `new Date()`) para evitar erros de fuso horário
+- Coluna Motivos com quebra de linha automática (`splitTextToSize`) e altura de linha dinâmica
+- Proteção contra divisão por zero no cálculo de `% refugo` por linha
 
 ---
 
