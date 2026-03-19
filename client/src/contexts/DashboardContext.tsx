@@ -54,8 +54,19 @@ async function salvarSupabase(key: string, value: unknown): Promise<void> {
   }
 }
 
+// Estrutura vazia de meses — usada como estado inicial NEUTRO.
+// NUNCA contém registros, para não sobrescrever dados do Supabase.
+const MESES_VAZIOS: MonthData[] = Array.from({ length: 12 }, (_, i) => ({
+  mes: i + 1,
+  ano: 2026,
+  registros: [],
+}));
+
 export function DashboardProvider({ children }: { children: React.ReactNode }) {
-  const [meses, setMeses] = useState<MonthData[]>(DADOS_INICIAIS);
+  // Estado inicial VAZIO — os dados reais sempre vêm do Supabase.
+  // DADOS_INICIAIS é mantido no initialData.ts apenas como referência/seed manual,
+  // nunca é usado como estado padrão para evitar sobrescrever dados do banco.
+  const [meses, setMeses] = useState<MonthData[]>(MESES_VAZIOS);
   const [mesAtual, setMesAtual] = useState<number>(() => new Date().getMonth() + 1);
   const [anoAtual] = useState<number>(2026);
   const [metaRefugo, setMetaRefugoState] = useState<number>(META_REFUGO_PERCENT);
@@ -63,12 +74,14 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
 
-  // Refs espelham o estado — permitem que callbacks leiam o valor mais recente
-  // sem closures stale, possibilitando persistência instantânea.
-  const mesesRef = useRef<MonthData[]>(meses);
-  const metaRefugoRef = useRef<number>(metaRefugo);
-  const motivosRef = useRef<string[]>(motivos);
-  const dadosCarregados = useRef(false);
+  // Refs espelham o estado atual para persistência instantânea sem closures stale.
+  const mesesRef = useRef<MonthData[]>(MESES_VAZIOS);
+  const metaRefugoRef = useRef<number>(META_REFUGO_PERCENT);
+  const motivosRef = useRef<string[]>(MOTIVOS_PADRAO);
+
+  // CRÍTICO: só permite saves após carregamento bem-sucedido do Supabase.
+  // Permanece false se o carregamento falhar — impede sobrescrever dados com estado vazio.
+  const podeSalvar = useRef(false);
 
   // ─── Carregamento inicial ──────────────────────────────────────────────────
   useEffect(() => {
@@ -78,10 +91,19 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
           lerSupabase("meses"),
           lerSupabase("config"),
         ]);
+
         if (Array.isArray(dadosMeses) && dadosMeses.length > 0) {
+          // Supabase tem dados — usa eles
           setMeses(dadosMeses as MonthData[]);
           mesesRef.current = dadosMeses as MonthData[];
+        } else {
+          // Primeira execução: banco vazio — salva os dados iniciais UMA VEZ
+          console.info("[DashboardContext] Banco vazio. Populando com DADOS_INICIAIS.");
+          setMeses(DADOS_INICIAIS);
+          mesesRef.current = DADOS_INICIAIS;
+          await salvarSupabase("meses", DADOS_INICIAIS);
         }
+
         if (dadosConfig && typeof dadosConfig === "object") {
           const c = dadosConfig as { metaRefugo?: number; motivos?: string[] };
           if (typeof c.metaRefugo === "number") {
@@ -93,31 +115,38 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
             motivosRef.current = c.motivos;
           }
         }
+
+        // Habilita saves SOMENTE após carregamento bem-sucedido
+        podeSalvar.current = true;
       } catch (err) {
-        console.warn("[DashboardContext] Supabase indisponível, usando dados iniciais:", err);
+        // Supabase falhou — NÃO habilita saves para não sobrescrever dados reais
+        console.error("[DashboardContext] Falha no carregamento do Supabase:", err);
+        console.warn("[DashboardContext] Saves desabilitados para proteger dados do banco.");
       } finally {
-        dadosCarregados.current = true;
         setCarregando(false);
       }
     }
     carregar();
   }, []);
 
-  // ─── Helpers de persistência ───────────────────────────────────────────────
+  // ─── Helpers de persistência (com guard) ──────────────────────────────────
   function persistirMeses(novosMeses: MonthData[]) {
+    if (!podeSalvar.current) return; // guard: não salva antes do carregamento OK
     salvarSupabase("meses", novosMeses).catch((err) =>
       console.error("[DashboardContext] Falha ao persistir meses:", err)
     );
   }
 
   function persistirConfig(novaMeta: number, novosMotivos: string[]) {
+    if (!podeSalvar.current) return;
     salvarSupabase("config", { metaRefugo: novaMeta, motivos: novosMotivos }).catch((err) =>
       console.error("[DashboardContext] Falha ao persistir config:", err)
     );
   }
 
-  // ─── salvarTudo: flush garantido antes do logout ───────────────────────────
+  // ─── salvarTudo: flush garantido no logout ─────────────────────────────────
   const salvarTudo = useCallback(async (): Promise<void> => {
+    if (!podeSalvar.current) return;
     setSalvando(true);
     try {
       await Promise.all([

@@ -22,6 +22,7 @@ Sistema web para controle e análise de refugo industrial. Permite lançar regis
 - **Exportação PDF completa** — relatório mensal com totais, tabela de registros e motivos gerado no navegador
 - **Persistência instantânea** — cada alteração é enviada ao Supabase imediatamente, sem aguardar ciclos do React
 - **Save garantido no logout** — ao clicar em Sair, todos os dados são sincronizados com o banco antes de encerrar a sessão
+- **Dados preservados entre deploys** — atualizações de código nunca sobrescrevem os dados do banco; o estado inicial é sempre neutro e os registros são carregados exclusivamente do Supabase
 - **Tema claro/escuro** — alternância manual pelo cabeçalho
 - **Responsivo** — funciona em desktop, tablet e celular
 
@@ -320,6 +321,25 @@ Acessíveis pelo ícone ⚙️ na sidebar:
 
 ## 🔧 Detalhes de Implementação
 
+### Proteção de dados entre deploys (`DashboardContext.tsx`)
+
+Toda atualização publicada no Vercel recarrega o frontend do zero. Para garantir que os dados do Supabase nunca sejam perdidos ou sobrescritos, o contexto segue três regras:
+
+1. **Estado inicial neutro** — `meses` é inicializado com 12 meses vazios (`MESES_VAZIOS`), sem nenhum registro hardcoded. `DADOS_INICIAIS` só é usado quando o banco está vazio pela primeira vez.
+
+2. **Flag `podeSalvar`** — ref booleana que começa como `false` e só é ativada após o carregamento bem-sucedido do Supabase. Se a conexão falhar na inicialização, nenhum save é disparado, evitando que o estado vazio sobrescreva os dados reais.
+
+3. **Primeira execução detectada automaticamente** — se o banco retornar vazio (`PGRST116` ou array vazio), o app popula o Supabase com `DADOS_INICIAIS` uma única vez e então habilita os saves normalmente.
+
+```
+App inicia
+    │
+    ├── Supabase retorna dados → carrega dados reais → podeSalvar = true ✅
+    ├── Supabase retorna vazio → popula com DADOS_INICIAIS → podeSalvar = true ✅
+    └── Supabase falha        → mantém tela de carregamento → podeSalvar = false 🔒
+                                 (saves bloqueados, dados protegidos)
+```
+
 ### Persistência instantânea (`DashboardContext.tsx`)
 
 Cada função de ação (`adicionarRegistro`, `editarRegistro`, `excluirRegistro`, `setMetaRefugo`, `adicionarMotivo`, `removerMotivo`) calcula o novo estado e dispara o `upsert` no Supabase **imediatamente**, sem depender do ciclo de re-render do React. Isso é possível porque o contexto mantém `useRef` espelhando os valores mais recentes do estado.
@@ -327,8 +347,8 @@ Cada função de ação (`adicionarRegistro`, `editarRegistro`, `excluirRegistro
 ```
 Usuário clica "Salvar"
         │
-        ├── setMeses(novoEstado)      → atualiza a UI
-        └── salvarSupabase(novoEstado) → persiste imediatamente
+        ├── setMeses(novoEstado)       → atualiza a UI
+        └── persistirMeses(novoEstado) → upsert no Supabase na mesma chamada
 ```
 
 ### Save no logout (`Home.tsx`)
@@ -337,7 +357,7 @@ O botão Sair executa `salvarTudo()` antes de `logout()`. A função `salvarTudo
 
 ### Geração de PDF (`generatePDF.ts`)
 
-- Registros já chegam filtrados do contexto — não há re-filtragem interna que pudesse descartar dados
+- Registros chegam já filtrados por mês via `getMesData()` — sem re-filtragem interna que possa descartar dados
 - Datas lidas diretamente da string `YYYY-MM-DD` (sem `new Date()`) para evitar erros de fuso horário
 - Coluna Motivos com quebra de linha automática (`splitTextToSize`) e altura de linha dinâmica
 - Proteção contra divisão por zero no cálculo de `% refugo` por linha
