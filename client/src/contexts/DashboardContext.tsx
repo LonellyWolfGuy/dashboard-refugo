@@ -36,6 +36,13 @@ function gerarId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 }
 
+// Ordena motivos: alfabético, "Outros" sempre por último
+function ordenarMotivos(motivos: string[]): string[] {
+  const outros = motivos.filter(m => m.toLowerCase() === "outros");
+  const resto  = motivos.filter(m => m.toLowerCase() !== "outros").sort((a, b) => a.localeCompare(b, "pt-BR"));
+  return [...resto, ...outros];
+}
+
 // ─── Helpers Supabase ─────────────────────────────────────────────────────────
 
 // Lê todos os registros do ano do banco — cada linha é um DailyRecord independente
@@ -95,7 +102,7 @@ async function lerConfig(): Promise<{ metaRefugo: number; motivos: string[] }> {
 
   return {
     metaRefugo: typeof map.meta_refugo === "number" ? map.meta_refugo : Number(map.meta_refugo ?? META_REFUGO_PERCENT),
-    motivos: Array.isArray(map.motivos) ? map.motivos : MOTIVOS_PADRAO,
+    motivos: Array.isArray(map.motivos) ? ordenarMotivos(map.motivos) : ordenarMotivos(MOTIVOS_PADRAO),
   };
 }
 
@@ -202,7 +209,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
 
   const adicionarMotivo = useCallback(async (motivo: string) => {
     if (!motivo.trim() || motivosRef.current.includes(motivo.trim())) return;
-    const novos = [...motivosRef.current, motivo.trim()];
+    const novos = ordenarMotivos([...motivosRef.current, motivo.trim()]);
     await salvarConfig("motivos", novos);
     setMotivosState(novos);
     motivosRef.current = novos;

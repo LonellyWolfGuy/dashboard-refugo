@@ -11,6 +11,14 @@ interface ModalConfiguracoesProps {
   onClose: () => void;
 }
 
+// Ordena: alfabético, "Outros" sempre por último
+function ordenarMotivos(motivos: string[]): string[] {
+  const outros = motivos.filter(m => m.toLowerCase() === "outros");
+  const resto  = motivos.filter(m => m.toLowerCase() !== "outros").sort((a, b) => a.localeCompare(b, "pt-BR"));
+  return [...resto, ...outros];
+}
+
+
 export default function ModalConfiguracoes({ onClose }: ModalConfiguracoesProps) {
   const { metaRefugo, setMetaRefugo, getTotaisMes, meses, motivos, adicionarMotivo, removerMotivo } = useDashboard();
   const [novaMeta, setNovaMeta] = useState(metaRefugo.toString());
