@@ -7,10 +7,22 @@ import {
 
 // Paleta de cores — expande automaticamente para qualquer número de motivos
 const PALETA = [
-  "#ef4444","#f97316","#eab308","#22c55e",
-  "#06b6d4","#3b82f6","#8b5cf6","#ec4899",
-  "#14b8a6","#f59e0b","#84cc16","#a855f7",
-  "#0ea5e9","#10b981","#f43f5e","#6366f1",
+  "#FF2D2D", // vermelho vivo
+  "#FF7A00", // laranja
+  "#FFD600", // amarelo
+  "#00C853", // verde
+  "#00B8D4", // ciano
+  "#2979FF", // azul
+  "#D500F9", // roxo
+  "#FF1493", // rosa choque
+  "#00E676", // verde neon
+  "#FF6D00", // laranja escuro
+  "#1DE9B6", // turquesa
+  "#AA00FF", // violeta
+  "#F50057", // vermelho rosa
+  "#00B0FF", // azul claro
+  "#76FF03", // lima
+  "#FF4081", // rosa
 ];
 
 function getCor(index: number): string {
@@ -100,7 +112,7 @@ export default function AnaliseMotivoRefugo() {
                 return entry?.motivoCompleto ?? label;
               }}
             />
-            <Bar dataKey="quantidade" radius={[8, 8, 0, 0]}>
+            <Bar dataKey="quantidade" radius={[8, 8, 0, 0]} label={{ position: "top", fontSize: 11, fontWeight: 600, formatter: (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 1 }) }}>
               {dadosBarras.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.cor} />
               ))}

@@ -402,32 +402,32 @@ export default function TabelaRegistros() {
                     </span>
                   </td>
                   <td className="px-5 py-3">
-                    <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center justify-center gap-2">
                       <button
                         onClick={() => abrirModalMotivos(r)}
                         className={cn(
-                          "p-1.5 rounded transition-colors",
+                          "p-2 rounded-lg transition-colors",
                           r.motivos && r.motivos.length > 0
-                            ? "text-green-600 hover:bg-green-50"
-                            : "text-slate-400 hover:text-amber-600 hover:bg-amber-50"
+                            ? "text-green-700 bg-green-100 hover:bg-green-200"
+                            : "text-amber-600 bg-amber-100 hover:bg-amber-200"
                         )}
                         title="Motivos de refugo"
                       >
-                        <AlertCircle className="w-3 h-3" />
+                        <AlertCircle className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => iniciarEdicao(r)}
-                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        className="p-2 text-blue-700 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors"
                         title="Editar"
                       >
-                        <Pencil className="w-3 h-3" />
+                        <Pencil className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleExcluir(r.id)}
-                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                        className="p-2 text-red-700 bg-red-100 hover:bg-red-200 rounded-lg transition-colors"
                         title="Excluir"
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </td>
