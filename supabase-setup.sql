@@ -56,10 +56,12 @@ ALTER TABLE registros ENABLE ROW LEVEL SECURITY;
 ALTER TABLE config    ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "allow_all_registros" ON registros;
-CREATE POLICY "allow_all_registros" ON registros FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "auth_only_registros" ON registros;
+CREATE POLICY "auth_only_registros" ON registros FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 DROP POLICY IF EXISTS "allow_all_config" ON config;
-CREATE POLICY "allow_all_config" ON config FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "auth_only_config" ON config;
+CREATE POLICY "auth_only_config" ON config FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 -- ─── Seed: dados iniciais (só insere se tabela estiver vazia) ─────────────────
 INSERT INTO registros (id, data, mes, ano, producao, refugo, motivos) VALUES

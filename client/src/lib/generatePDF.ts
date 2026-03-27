@@ -4,6 +4,7 @@ import { MESES_NOMES } from "./initialData";
 
 export async function generateMonthlyPDF(
   mesAtual: number,
+  anoAtual: number,
   registros: any[],
   metaRefugo: number
 ) {
@@ -36,11 +37,11 @@ export async function generateMonthlyPDF(
     // ===== TÍTULO =====
     doc.setFontSize(16);
     doc.setTextColor(13, 122, 46);
-    doc.text("CONTROLE DE REFUGO 2026", pageWidth / 2, y + 8, { align: "center" });
+    doc.text(`CONTROLE DE REFUGO ${anoAtual}`, pageWidth / 2, y + 8, { align: "center" });
     doc.setFontSize(12);
     doc.setTextColor(100, 100, 100);
     doc.text(
-      `Relatório de ${MESES_NOMES[mesAtual - 1]} 2026`,
+      `Relatório de ${MESES_NOMES[mesAtual - 1]} ${anoAtual}`,
       pageWidth / 2,
       y + 15,
       { align: "center" }
@@ -117,7 +118,7 @@ export async function generateMonthlyPDF(
       const colList = Object.values(cols);
       const rowHeight = 5.5;
 
-      function drawHeader() {
+      const drawHeader = () => {
         doc.setFontSize(8);
         doc.setTextColor(255, 255, 255);
         doc.setFillColor(13, 122, 46);
@@ -127,7 +128,7 @@ export async function generateMonthlyPDF(
           doc.text(c.label, tx, y + 4.2, { align: c.align });
         });
         y += 6;
-      }
+      };
 
       drawHeader();
 
@@ -212,7 +213,7 @@ export async function generateMonthlyPDF(
     const rodape = `Gerado em ${now.toLocaleDateString("pt-BR")} às ${now.toLocaleTimeString("pt-BR")} — Total de registros: ${registros.length}`;
     doc.text(rodape, pageWidth / 2, pageHeight - 8, { align: "center" });
 
-    doc.save(`Refugo_${MESES_NOMES[mesAtual - 1]}_2026.pdf`);
+    doc.save(`Refugo_${MESES_NOMES[mesAtual - 1]}_${anoAtual}.pdf`);
     return true;
   } catch (error) {
     console.error("Erro ao gerar PDF:", error);

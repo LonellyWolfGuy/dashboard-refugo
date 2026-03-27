@@ -75,8 +75,6 @@ dashboard-refugo/
 │           ├── Home.tsx                # Página principal (dashboard)
 │           ├── LoginPage.tsx           # Tela de login
 │           └── NotFound.tsx            # Página 404
-├── server/
-│   └── index.ts                        # Servidor Express (uso local apenas)
 ├── shared/
 │   └── const.ts                        # Constantes compartilhadas
 ├── supabase-setup.sql                  # Script SQL para configurar o banco
@@ -247,8 +245,10 @@ Menu lateral com navegação por mês. Cada mês exibe um indicador colorido de 
 | Estilização | [Tailwind CSS 4](https://tailwindcss.com) |
 | Componentes | [shadcn/ui](https://ui.shadcn.com) + [Radix UI](https://radix-ui.com) |
 | Gráficos | [Recharts](https://recharts.org) |
+| Gerenciamento de Estado | [React Query](https://tanstack.com/query) |
 | Banco de dados | [Supabase](https://supabase.com) (PostgreSQL + JSONB) |
 | Autenticação | [Supabase Auth](https://supabase.com/docs/guides/auth) |
+| Suporte Offline | [Vite PWA](https://vite-pwa-org.netlify.app/) |
 | Roteamento | [Wouter](https://github.com/molefrog/wouter) |
 | Formulários | [React Hook Form](https://react-hook-form.com) + [Zod](https://zod.dev) |
 | PDF | [jsPDF](https://github.com/parallax/jsPDF) |
@@ -375,5 +375,5 @@ MIT © Implatec Perfis Plásticos
 ---
 
 <p align="center">
-  Desenvolvido para controle de qualidade industrial — <strong>Implatec Perfis Plásticos ® 2026</strong>
+  Desenvolvido para controle de qualidade industrial — <strong>Implatec Perfis Plásticos ®</strong>
 </p>

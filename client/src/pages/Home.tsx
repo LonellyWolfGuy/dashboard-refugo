@@ -19,7 +19,7 @@ import { generateMonthlyPDF } from "@/lib/generatePDF";
 import { toast } from "sonner";
 
 export default function Home() {
-  const { mesAtual, setMesAtual, meses, metaRefugo, salvarTudo, getMesData } = useDashboard();
+  const { mesAtual, setMesAtual, anoAtual, setAnoAtual, meses, metaRefugo, salvarTudo, getMesData } = useDashboard();
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
   const [modalConfig, setModalConfig] = useState(false);
@@ -43,7 +43,7 @@ export default function Home() {
     try {
       setExportandoPDF(true);
       const mesData = getMesData(mesAtual);
-      await generateMonthlyPDF(mesAtual, mesData.registros, metaRefugo);
+      await generateMonthlyPDF(mesAtual, anoAtual, mesData.registros, metaRefugo);
       toast.success(`Relatório de ${MESES_NOMES[mesAtual - 1]} exportado com sucesso!`);
     } catch (error) {
       console.error(error);
@@ -106,10 +106,21 @@ export default function Home() {
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <h1 className="text-lg font-bold text-gray-800 min-w-[120px] text-center">
-                  {MESES_NOMES[mesAtual - 1]}
-                  <span className="text-gray-400 font-normal ml-1.5 text-sm">2026</span>
-                </h1>
+                <div className="flex flex-col items-center justify-center min-w-[120px] px-2">
+                  <h1 className="text-lg font-bold text-gray-800 leading-none">
+                    {MESES_NOMES[mesAtual - 1]}
+                  </h1>
+                  <select
+                    value={anoAtual}
+                    onChange={(e) => setAnoAtual(Number(e.target.value))}
+                    className="text-gray-400 font-medium text-xs bg-transparent border-none outline-none mt-0.5 cursor-pointer hover:text-gray-600 text-center appearance-none"
+                    style={{ textAlignLast: "center" }}
+                  >
+                    {Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i).map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
                 <button
                   onClick={irMesProximo}
                   disabled={mesAtual === 12}
@@ -213,7 +224,7 @@ export default function Home() {
         {/* Rodapé */}
         <footer className="border-t border-gray-200 bg-white px-4 lg:px-6 py-3 mt-auto">
           <p className="text-center text-xs text-gray-400 font-medium tracking-wide">
-            Controle de Refugos &mdash; 2026 &mdash; Implatec Perfis Plásticos ® &mdash; Todos os direitos reservados.
+            Controle de Refugos &mdash; {new Date().getFullYear()} &mdash; Implatec Perfis Plásticos ® &mdash; Todos os direitos reservados.
           </p>
         </footer>
 
