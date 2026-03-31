@@ -1,6 +1,8 @@
 // Dados iniciais extraídos do arquivo CONTROLEDEREFUGO2026.xlsx
 // Estrutura: { data: string (YYYY-MM-DD), producao: number, refugo: number }
 
+import { gerarId } from "./utils";
+
 export interface RefugoMotivo {
   id: string;
   motivo: string;
@@ -64,9 +66,7 @@ export function getMotivosCoresMap(): Record<string, string> {
   return map;
 }
 
-function gerarId(): string {
-  return Math.random().toString(36).substr(2, 9);
-}
+
 
 export const DADOS_INICIAIS: MonthData[] = [
   {

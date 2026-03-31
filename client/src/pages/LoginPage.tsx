@@ -137,7 +137,7 @@ export default function LoginPage() {
 
         {/* Rodapé */}
         <p className="text-center text-xs text-gray-400 mt-6">
-          Controle de Refugos &mdash; 2026 &mdash; Implatec Perfis Plásticos ®
+          Controle de Refugos &mdash; {new Date().getFullYear()} &mdash; Implatec Perfis Plásticos ®
         </p>
       </div>
     </div>

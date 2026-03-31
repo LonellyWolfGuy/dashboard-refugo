@@ -34,7 +34,7 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
 }
 
 export default function GraficoAnual() {
-  const { getTotaisMes, metaRefugo } = useDashboard();
+  const { anoAtual, getTotaisMes, metaRefugo } = useDashboard();
 
   const dados = MESES_ABREV.map((nome, idx) => {
     const mes = idx + 1;
@@ -52,7 +52,7 @@ export default function GraficoAnual() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-sm font-semibold text-slate-700">Evolução Anual — % Refugo</h3>
-          <p className="text-xs text-slate-400">Comparativo mensal 2026</p>
+          <p className="text-xs text-slate-400">Comparativo mensal {anoAtual}</p>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-200">
           <span className="w-3 h-0.5 border-t-2 border-dashed border-amber-500 inline-block" />

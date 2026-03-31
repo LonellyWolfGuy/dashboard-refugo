@@ -20,7 +20,7 @@ function ordenarMotivos(motivos: string[]): string[] {
 
 
 export default function ModalConfiguracoes({ onClose }: ModalConfiguracoesProps) {
-  const { metaRefugo, setMetaRefugo, getTotaisMes, meses, motivos, adicionarMotivo, removerMotivo } = useDashboard();
+  const { anoAtual, metaRefugo, setMetaRefugo, getTotaisMes, meses, motivos, adicionarMotivo, removerMotivo } = useDashboard();
   const [novaMeta, setNovaMeta] = useState(metaRefugo.toString());
   const [novoMotivo, setNovoMotivo] = useState("");
   const [abaAtiva, setAbaAtiva] = useState<"meta" | "motivos" | "dados">("meta");
@@ -57,7 +57,7 @@ export default function ModalConfiguracoes({ onClose }: ModalConfiguracoesProps)
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "controle-refugo-2026.csv";
+    a.download = `controle-refugo-${anoAtual}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Arquivo CSV exportado com sucesso.");
@@ -65,7 +65,7 @@ export default function ModalConfiguracoes({ onClose }: ModalConfiguracoesProps)
 
   function limparDados() {
     if (!confirm("Tem certeza que deseja limpar TODOS os dados? Esta ação não pode ser desfeita.")) return;
-    localStorage.removeItem("dashboard-refugo-2026");
+    localStorage.removeItem(`dashboard-refugo-${anoAtual}`);
     window.location.reload();
   }
 

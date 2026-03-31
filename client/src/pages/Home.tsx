@@ -169,11 +169,8 @@ export default function Home() {
                 <button
                   onClick={async () => {
                     toast.loading("Saindo...", { id: "logout-save" });
-                    await salvarTudo().catch(() => {
-                      // save já ocorre em tempo real a cada ação — falha aqui não é crítica
-                    });
-                    toast.dismiss("logout-save");
                     await logout();
+                    toast.dismiss("logout-save");
                   }}
                   title="Sair do sistema"
                   className="p-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
@@ -186,9 +183,8 @@ export default function Home() {
               <button
                 onClick={async () => {
                   toast.loading("Saindo...", { id: "logout-save-mobile" });
-                  await salvarTudo().catch(() => {});
-                  toast.dismiss("logout-save-mobile");
                   await logout();
+                  toast.dismiss("logout-save-mobile");
                 }}
                 title="Sair"
                 className="sm:hidden p-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"

@@ -53,6 +53,8 @@ export default function TabelaRegistros() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [modalMotivoAberto, setModalMotivoAberto] = useState(false);
   const [registroSelecionado, setRegistroSelecionado] = useState<DailyRecord | null>(null);
+  const [salvando, setSalvando] = useState(false);
+  const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
 
   const registros = [...mesData.registros].sort((a, b) => {
     const diff = new Date(a.data).getTime() - new Date(b.data).getTime();
@@ -83,12 +85,15 @@ export default function TabelaRegistros() {
       toast.error("Os valores não podem ser negativos.");
       return;
     }
+    setSalvando(true);
     try {
       await editarRegistro(mesAtual, editState.id, { data: editState.data, producao, refugo });
       setEditState(emptyEdit);
       toast.success("Registro atualizado com sucesso.");
     } catch {
       toast.error("Erro ao salvar. Verifique a conexão e tente novamente.");
+    } finally {
+      setSalvando(false);
     }
   }
 
@@ -121,6 +126,7 @@ export default function TabelaRegistros() {
       return;
     }
 
+    setSalvando(true);
     try {
       await adicionarRegistro(destino.mes, { data: novoData, producao, refugo });
       setNovoData("");
@@ -134,6 +140,8 @@ export default function TabelaRegistros() {
       }
     } catch {
       toast.error("Erro ao salvar. Verifique a conexão e tente novamente.");
+    } finally {
+      setSalvando(false);
     }
   }
 
@@ -166,11 +174,15 @@ export default function TabelaRegistros() {
   }
 
   async function handleExcluir(id: string) {
+    if (!confirm("Tem certeza que deseja excluir este registro?")) return;
+    setIsDeletingId(id);
     try {
       await excluirRegistro(mesAtual, id);
       toast.success("Registro excluído.");
     } catch {
       toast.error("Erro ao excluir. Tente novamente.");
+    } finally {
+      setIsDeletingId(null);
     }
   }
 
@@ -234,10 +246,10 @@ export default function TabelaRegistros() {
       )}
 
       {/* Tabela */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto max-h-[500px] overflow-y-auto relative">
         <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-slate-50 border-b border-slate-100">
+          <thead className="sticky top-0 z-10 bg-slate-50 shadow-sm">
+            <tr className="border-b border-slate-100">
               <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-32">
                 <button
                   className="flex items-center gap-1 hover:text-slate-700 transition-colors"
@@ -295,7 +307,7 @@ export default function TabelaRegistros() {
                 </td>
                 <td className="px-5 py-2.5">
                   <div className="flex items-center justify-center gap-1.5">
-                    <button onClick={salvarNovo} className="p-1 text-emerald-600 hover:bg-emerald-100 rounded transition-colors" title="Salvar">
+                    <button onClick={salvarNovo} disabled={salvando} className="p-1 text-emerald-600 hover:bg-emerald-100 rounded transition-colors disabled:opacity-50" title="Salvar">
                       <Check className="w-3.5 h-3.5" />
                     </button>
                     <button onClick={cancelarNovo} className="p-1 text-slate-400 hover:bg-slate-100 rounded transition-colors" title="Cancelar">
@@ -366,7 +378,7 @@ export default function TabelaRegistros() {
                     </td>
                     <td className="px-5 py-2.5">
                       <div className="flex items-center justify-center gap-1.5">
-                        <button onClick={salvarEdicao} className="p-1 text-emerald-600 hover:bg-emerald-100 rounded transition-colors" title="Salvar">
+                        <button onClick={salvarEdicao} disabled={salvando} className="p-1 text-emerald-600 hover:bg-emerald-100 rounded transition-colors disabled:opacity-50" title="Salvar">
                           <Check className="w-3.5 h-3.5" />
                         </button>
                         <button onClick={() => setEditState(emptyEdit)} className="p-1 text-slate-400 hover:bg-slate-100 rounded transition-colors" title="Cancelar">
@@ -424,7 +436,8 @@ export default function TabelaRegistros() {
                       </button>
                       <button
                         onClick={() => handleExcluir(r.id)}
-                        className="p-2 text-red-700 bg-red-100 hover:bg-red-200 rounded-lg transition-colors"
+                        disabled={isDeletingId === r.id}
+                        className="p-2 text-red-700 bg-red-100 hover:bg-red-200 rounded-lg transition-colors disabled:opacity-50"
                         title="Excluir"
                       >
                         <Trash2 className="w-4 h-4" />

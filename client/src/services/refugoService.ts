@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { DailyRecord, META_REFUGO_PERCENT } from "@/lib/initialData";
+import { gerarId } from "@/lib/utils";
 
 const MOTIVOS_PADRAO = [
   "Defeito de fabricação", "Material inadequado", "Dimensões incorretas",
@@ -7,9 +8,7 @@ const MOTIVOS_PADRAO = [
   "Falha de qualidade", "Outros"
 ];
 
-function gerarId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
-}
+
 
 export function ordenarMotivos(motivos: string[]): string[] {
   const outros = motivos.filter(m => m.toLowerCase() === "outros");
@@ -36,7 +35,7 @@ export async function lerRegistros(ano: number, mes?: number): Promise<DailyReco
     data: r.data,
     producao: Number(r.producao),
     refugo: Number(r.refugo),
-    motivos: Array.isArray(r.motivos) ? r.motivos : [],
+    motivos: (Array.isArray(r.motivos) ? r.motivos : []) as any,
   }));
 }
 
@@ -49,7 +48,7 @@ export async function inserirRegistro(mes: number, ano: number, reg: Omit<DailyR
     ano,
     producao: novoRegistro.producao,
     refugo: novoRegistro.refugo,
-    motivos: novoRegistro.motivos ?? [],
+    motivos: (novoRegistro.motivos ?? []) as any,
   });
   if (error) throw new Error(`[Supabase] inserirRegistro: ${error.message}`);
   return novoRegistro;
@@ -60,7 +59,7 @@ export async function atualizarRegistro(id: string, reg: Omit<DailyRecord, "id">
     data: reg.data,
     producao: reg.producao,
     refugo: reg.refugo,
-    motivos: reg.motivos ?? [],
+    motivos: (reg.motivos ?? []) as any,
   }).eq("id", id);
   if (error) throw new Error(`[Supabase] atualizarRegistro: ${error.message}`);
 }

@@ -20,8 +20,7 @@ export async function generateMonthlyPDF(
     let y = 10;
 
     // ===== LOGO =====
-    const logoUrl =
-      "https://d2xsxph8kpxj0f.cloudfront.net/310519663426607805/TdnUqJefUqzPEiCTQPUCvH/Logo-Implatec-Melhor-Qualidade-removebg-preview_39f348ff.png";
+    const logoUrl = "/logo.png";
     try {
       const blob = await fetch(logoUrl).then((r) => r.blob());
       const dataUrl = await new Promise<string>((resolve) => {

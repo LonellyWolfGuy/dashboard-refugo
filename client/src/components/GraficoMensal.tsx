@@ -69,7 +69,7 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
 }
 
 export default function GraficoMensal() {
-  const { mesAtual, getMesData, metaRefugo } = useDashboard();
+  const { mesAtual, anoAtual, getMesData, metaRefugo } = useDashboard();
   const mesData = getMesData(mesAtual);
 
   const dados = mesData.registros.map(r => {
@@ -107,7 +107,7 @@ export default function GraficoMensal() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-sm font-semibold text-slate-700">Produção vs. Refugo</h3>
-          <p className="text-xs text-slate-400">{MESES_NOMES[mesAtual - 1]} 2026 — {dados.length} dia{dados.length !== 1 ? "s" : ""}</p>
+          <p className="text-xs text-slate-400">{MESES_NOMES[mesAtual - 1]} {anoAtual} — {dados.length} dia{dados.length !== 1 ? "s" : ""}</p>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-200">
           <span className="w-3 h-0.5 bg-amber-500 inline-block border-t-2 border-dashed border-amber-500" />

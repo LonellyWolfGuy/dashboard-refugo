@@ -25,7 +25,7 @@ function getStatusTextColor(percent: number, meta: number): string {
 }
 
 export default function Sidebar({ onOpenSettings }: SidebarProps) {
-  const { mesAtual, setMesAtual, getTotaisMes, getTotaisAnuais, metaRefugo } = useDashboard();
+  const { mesAtual, setMesAtual, anoAtual, getTotaisMes, getTotaisAnuais, metaRefugo } = useDashboard();
   const totaisAnuais = getTotaisAnuais();
 
   return (
@@ -33,12 +33,12 @@ export default function Sidebar({ onOpenSettings }: SidebarProps) {
       {/* Logo / Header */}
       <div className="px-4 py-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-white">
         <img 
-          src="https://d2xsxph8kpxj0f.cloudfront.net/310519663426607805/TdnUqJefUqzPEiCTQPUCvH/Logo-Implatec-Melhor-Qualidade-removebg-preview_39f348ff.png" 
+          src="/logo.png" 
           alt="Implatec" 
           className="h-12 w-auto mb-2"
         />
         <p className="text-xs font-semibold text-green-700 leading-tight">CONTROLE DE</p>
-        <p className="text-xs font-bold text-green-700 leading-tight">REFUGO 2026</p>
+        <p className="text-xs font-bold text-green-700 leading-tight">REFUGO {anoAtual}</p>
       </div>
 
       {/* Totais Anuais */}

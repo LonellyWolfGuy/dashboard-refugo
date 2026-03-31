@@ -10,6 +10,16 @@ Sistema web para controle e análise de refugo industrial. Permite lançar regis
 
 ---
 
+## 🚀 Novidades da Versão Atual (V2)
+
+- **Ano Dinâmico** — Fim da amarra ao ano de 2026. O sistema passa a identificar o ano nativamente sem quebrar histórico.
+- **Segurança Reforçada (RLS)** — Implantação de _Row Level Security_ para blindar acessos indevidos a dados de outras sessões (quando no Supabase).
+- **Tratamento Offline PWA** — O cache _NetworkFirst_ captura e permite re-visualização instantânea sem internet graças ao VitePWA atualizado.
+- **Prevenção de Erros de UX** — Caixas de diálogo inseridas nas exclusões para prevenir clique acidental na lixeira e _loading_ de spinners desabilitando re-submits.
+- **Performance Global** — Refatoração de recursividades no React utilizando `useMemo`, com ganho massivo de performance ao carregar mais de 100 linhas.
+
+---
+
 ## ✨ Funcionalidades
 
 - **Login seguro** — autenticação com e-mail e senha via Supabase Auth

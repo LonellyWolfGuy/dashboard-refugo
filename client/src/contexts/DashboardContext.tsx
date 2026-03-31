@@ -117,20 +117,29 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     meses.find(m => m.mes === mes && m.ano === anoAtual) ?? { mes, ano: anoAtual, registros: [] }
   , [meses, anoAtual]);
 
-  const getTotaisMes = useCallback((mes: number) => {
-    const d = getMesData(mes);
-    const totalProducao = d.registros.reduce((s, r) => s + r.producao, 0);
-    const totalRefugo   = d.registros.reduce((s, r) => s + r.refugo,   0);
-    const total = totalProducao + totalRefugo;
-    return { totalProducao, totalRefugo, total, percentRefugo: total > 0 ? (totalRefugo / total) * 100 : 0 };
-  }, [getMesData]);
+  const totaisMensaisMemo = React.useMemo(() => {
+    const mapa = new Map<number, { totalProducao: number; totalRefugo: number; total: number; percentRefugo: number }>();
+    for (const m of meses) {
+      const totalProducao = m.registros.reduce((s, r) => s + r.producao, 0);
+      const totalRefugo   = m.registros.reduce((s, r) => s + r.refugo,   0);
+      const total = totalProducao + totalRefugo;
+      mapa.set(m.mes, { totalProducao, totalRefugo, total, percentRefugo: total > 0 ? (totalRefugo / total) * 100 : 0 });
+    }
+    return mapa;
+  }, [meses]);
 
-  const getTotaisAnuais = useCallback(() => {
+  const getTotaisMes = useCallback((mes: number) => {
+    return totaisMensaisMemo.get(mes) ?? { totalProducao: 0, totalRefugo: 0, total: 0, percentRefugo: 0 };
+  }, [totaisMensaisMemo]);
+
+  const totaisAnuaisMemo = React.useMemo(() => {
     let totalProducao = 0, totalRefugo = 0;
     meses.forEach(m => m.registros.forEach(r => { totalProducao += r.producao; totalRefugo += r.refugo; }));
     const total = totalProducao + totalRefugo;
     return { totalProducao, totalRefugo, total, percentRefugo: total > 0 ? (totalRefugo / total) * 100 : 0 };
   }, [meses]);
+
+  const getTotaisAnuais = useCallback(() => totaisAnuaisMemo, [totaisAnuaisMemo]);
 
   return (
     <DashboardContext.Provider value={{
