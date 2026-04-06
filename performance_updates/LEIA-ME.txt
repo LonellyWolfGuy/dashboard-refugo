@@ -1,0 +1,3 @@
+# Instruções
+1. Substitua os arquivos na sua pasta 'client/src' pelos arquivos deste ZIP.
+2. Execute o script 'index_optimization.sql' no seu SQL Editor do Supabase.
