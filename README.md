@@ -1,4 +1,6 @@
-# 📊 Dashboard de Controle de Refugo
+# 📊 Dashboard de Controle de Refugo — V2 (Modernizado por Thiago Fischer)
+
+> **Status: 🟢 Versão 2 Estável** (Abril 2024)
 
 [![Deploy on Vercel](https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel)](https://vercel.com)
 [![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?logo=supabase)](https://supabase.com)
@@ -12,7 +14,9 @@ Sistema web para controle e análise de refugo industrial. Permite lançar regis
 
 ## 🚀 Novidades da Versão Atual (V2)
 
-- **Ano Dinâmico** — Fim da amarra ao ano de 2026. O sistema passa a identificar o ano nativamente sem quebrar histórico.
+- **Ano Dinâmico** — Fim da amarra ao ano de 2026. O sistema identifica o ano nativamente. (Implementado por Thiago Fischer)
+- **UX Premium** — Diálogos de confirmação Shadcn/UI para operações sensíveis. (Implementado por Thiago Fischer)
+- **Arquitetura 100% Supabase** — Remoção completa de dados "seed" locais.
 - **Segurança Reforçada (RLS)** — Implantação de _Row Level Security_ para blindar acessos indevidos a dados de outras sessões (quando no Supabase).
 - **Tratamento Offline PWA** — O cache _NetworkFirst_ captura e permite re-visualização instantânea sem internet graças ao VitePWA atualizado.
 - **Prevenção de Erros de UX** — Caixas de diálogo inseridas nas exclusões para prevenir clique acidental na lixeira e _loading_ de spinners desabilitando re-submits.
@@ -85,8 +89,6 @@ dashboard-refugo/
 │           ├── Home.tsx                # Página principal (dashboard)
 │           ├── LoginPage.tsx           # Tela de login
 │           └── NotFound.tsx            # Página 404
-├── shared/
-│   └── const.ts                        # Constantes compartilhadas
 ├── supabase-setup.sql                  # Script SQL para configurar o banco
 ├── vercel.json                         # Configuração de deploy no Vercel
 ├── vite.config.ts                      # Configuração do Vite
@@ -381,6 +383,14 @@ O botão Sair chama `salvarTudo()` silenciosamente (sem exibir erro ao usuário)
 ## 📄 Licença
 
 MIT © Implatec Perfis Plásticos
+
+---
+
+---
+
+## 🛠️ Créditos e Desenvolvimento
+
+Esta versão modernizada (V2) foi concebida e implementada por **Thiago Fischer**, focando na robustez industrial, suporte temporal dinâmico e excelência em UX.
 
 ---
 

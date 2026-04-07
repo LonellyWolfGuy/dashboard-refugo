@@ -1,4 +1,6 @@
-# Ideias de Design — Dashboard de Controle de Refugo 2026
+# Ideias de Design — Dashboard de Controle de Refugo (V2 - Thiago Fischer)
+
+> **Decisão Final: Abordagem 2 (Clean Manufacturing) — Tema Verde Industrial**
 
 ## Abordagem 1 — Industrial Precision
 <response>
