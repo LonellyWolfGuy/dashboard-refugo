@@ -9,6 +9,16 @@ import { cn } from "@/lib/utils";
 import { Pencil, Trash2, Plus, Check, X, ChevronUp, ChevronDown, AlertCircle, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import ModalMotivoRefugo from "./ModalMotivoRefugo";
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from "@/components/ui/alert-dialog";
 
 function formatData(data: string): string {
   const d = new Date(data + "T00:00:00");
@@ -55,6 +65,8 @@ export default function TabelaRegistros() {
   const [registroSelecionado, setRegistroSelecionado] = useState<DailyRecord | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
+  const [confirmExclusaoAberta, setConfirmExclusaoAberta] = useState(false);
+  const [idParaExcluir, setIdParaExcluir] = useState<string | null>(null);
 
   const registros = [...mesData.registros].sort((a, b) => {
     const diff = new Date(a.data).getTime() - new Date(b.data).getTime();
@@ -128,7 +140,7 @@ export default function TabelaRegistros() {
 
     setSalvando(true);
     try {
-      await adicionarRegistro(destino.mes, { data: novoData, producao, refugo });
+      await adicionarRegistro(destino.mes, destino.ano, { data: novoData, producao, refugo });
       setNovoData("");
       setNovoProducao("");
       setNovoRefugo("");
@@ -173,8 +185,17 @@ export default function TabelaRegistros() {
     }
   }
 
-  async function handleExcluir(id: string) {
-    if (!confirm("Tem certeza que deseja excluir este registro?")) return;
+  function solicitarExclusao(id: string) {
+    setIdParaExcluir(id);
+    setConfirmExclusaoAberta(true);
+  }
+
+  async function confirmarExclusao() {
+    if (!idParaExcluir) return;
+    const id = idParaExcluir;
+    setIdParaExcluir(null);
+    setConfirmExclusaoAberta(false);
+    
     setIsDeletingId(id);
     try {
       await excluirRegistro(mesAtual, id);
@@ -435,7 +456,7 @@ export default function TabelaRegistros() {
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleExcluir(r.id)}
+                        onClick={() => solicitarExclusao(r.id)}
                         disabled={isDeletingId === r.id}
                         className="p-2 text-red-700 bg-red-100 hover:bg-red-200 rounded-lg transition-colors disabled:opacity-50"
                         title="Excluir"
@@ -483,6 +504,27 @@ export default function TabelaRegistros() {
         totalRefugo={registroSelecionado?.refugo || 0}
         onSave={salvarMotivos}
       />
+
+      {/* Confirmação de Exclusão */}
+      <AlertDialog open={confirmExclusaoAberta} onOpenChange={setConfirmExclusaoAberta}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Registro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. O registro de produção e refugo deste dia será removido permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmarExclusao}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

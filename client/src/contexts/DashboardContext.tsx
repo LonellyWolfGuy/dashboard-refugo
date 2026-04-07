@@ -12,7 +12,7 @@ interface DashboardContextType {
   carregando: boolean;
   setMesAtual: (mes: number) => void;
   setAnoAtual: (ano: number) => void;
-  adicionarRegistro: (mes: number, registro: Omit<DailyRecord, "id">) => Promise<void>;
+  adicionarRegistro: (mes: number, ano: number, registro: Omit<DailyRecord, "id">) => Promise<void>;
   editarRegistro: (mes: number, id: string, dados: Omit<DailyRecord, "id">) => Promise<void>;
   excluirRegistro: (mes: number, id: string) => Promise<void>;
   setMetaRefugo: (meta: number) => Promise<void>;
@@ -82,9 +82,9 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["config"] }) },
   });
 
-  const adicionarRegistro = useCallback(async (mes: number, registro: Omit<DailyRecord, "id">) => {
-    await addMutation.mutateAsync({ mes, ano: anoAtual, req: registro });
-  }, [anoAtual, addMutation]);
+  const adicionarRegistro = useCallback(async (mes: number, ano: number, registro: Omit<DailyRecord, "id">) => {
+    await addMutation.mutateAsync({ mes, ano, req: registro });
+  }, [addMutation]);
 
   const editarRegistro = useCallback(async (_mes: number, id: string, dados: Omit<DailyRecord, "id">) => {
     await editMutation.mutateAsync({ id, req: dados });
