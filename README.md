@@ -1,6 +1,6 @@
 # 📊 Dashboard de Controle de Refugo — V2 (Modernizado por Thiago Fischer)
 
-> **Status: 🟢 Versão 2 Estável** (Abril 2024)
+> **Status: 🟢 Versão 2.1 Estável** (Maio 2026)
 
 [![Deploy on Vercel](https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel)](https://vercel.com)
 [![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?logo=supabase)](https://supabase.com)
@@ -15,12 +15,11 @@ Sistema web para controle e análise de refugo industrial. Permite lançar regis
 ## 🚀 Novidades da Versão Atual (V2)
 
 - **Ano Dinâmico** — Fim da amarra ao ano de 2026. O sistema identifica o ano nativamente. (Implementado por Thiago Fischer)
-- **UX Premium** — Diálogos de confirmação Shadcn/UI para operações sensíveis. (Implementado por Thiago Fischer)
+- **UX Premium** — Diálogos de confirmação Shadcn/UI para operações sensíveis e layout de cards responsivos para dispositivos móveis. (Implementado por Thiago Fischer)
 - **Arquitetura 100% Supabase** — Remoção completa de dados "seed" locais.
 - **Segurança Reforçada (RLS)** — Implantação de _Row Level Security_ para blindar acessos indevidos a dados de outras sessões (quando no Supabase).
-- **Tratamento Offline PWA** — O cache _NetworkFirst_ captura e permite re-visualização instantânea sem internet graças ao VitePWA atualizado.
-- **Prevenção de Erros de UX** — Caixas de diálogo inseridas nas exclusões para prevenir clique acidental na lixeira e _loading_ de spinners desabilitando re-submits.
-- **Performance Global** — Refatoração de recursividades no React utilizando `useMemo`, com ganho massivo de performance ao carregar mais de 100 linhas.
+- **Optimistic Updates** — Sincronização instantânea na UI; registros aparecem, editam e somem da tela no exato momento do clique, com tratamento de erro e rollback automático. (Implementado por Thiago Fischer)
+- **Performance de Elite** — Memoização profunda de estados derivados e processamento de meses, garantindo fluidez mesmo com centenas de registros. (Implementado por Thiago Fischer)
 
 ---
 
@@ -38,7 +37,7 @@ Sistema web para controle e análise de refugo industrial. Permite lançar regis
 - **Save garantido no logout** — ao clicar em Sair, todos os dados são sincronizados com o banco antes de encerrar a sessão
 - **Dados preservados entre deploys** — atualizações de código nunca sobrescrevem os dados do banco; cada registro é uma linha independente no Supabase, eliminando race conditions e sobrescrita acidental
 - **Tema claro/escuro** — alternância manual pelo cabeçalho
-- **Responsivo** — funciona em desktop, tablet e celular
+- **Totalmente Responsivo** — layout inteligente que alterna entre tabela (Desktop) e Cards (Mobile) para máxima usabilidade em qualquer tela
 
 ---
 
@@ -245,6 +244,11 @@ Menu lateral com navegação por mês. Cada mês exibe um indicador colorido de 
 | 🔴 Vermelho | % refugo acima da meta |
 | ⚪ Cinza | Sem registros |
 
+### Tabela de Lançamentos
+
+- **Layout Híbrido** — Em telas grandes, exibe uma tabela técnica detalhada. Em celulares, os dados se reorganizam automaticamente em **Cards** (cartões) empilhados, eliminando a rolagem horizontal e facilitando o toque nos botões de ação.
+- **Feedback Visual** — Badges coloridos indicam instantaneamente se o registro do dia está dentro ou fora da meta.
+
 ---
 
 ## 📦 Tecnologias
@@ -344,6 +348,14 @@ Usuário adiciona lançamento
 ```
 
 Nunca mais um save sobrescreve outro. Cada registro vive e morre de forma independente.
+
+### Sincronização Otimista (Optimistic Updates)
+
+A aplicação utiliza uma estratégia de **Optimistic UI** via React Query. Quando você adiciona, edita ou exclui um registro:
+1. A interface é atualizada **instantaneamente** localmente (o registro aparece/some na hora).
+2. O envio para o servidor acontece em segundo plano.
+3. Se houver erro de rede, a aplicação realiza um **rollback** automático, restaurando o dado anterior e avisando o usuário.
+Isso garante uma experiência de uso extremamente fluida, ideal para ambientes de fábrica com Wi-Fi oscilante.
 
 ### Estrutura das tabelas no Supabase
 
