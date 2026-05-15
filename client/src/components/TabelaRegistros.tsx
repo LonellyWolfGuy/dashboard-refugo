@@ -269,7 +269,7 @@ export default function TabelaRegistros() {
       {/* Tabela */}
       <div className="overflow-x-auto max-h-[500px] overflow-y-auto relative">
         <table className="w-full text-sm">
-          <thead className="sticky top-0 z-10 bg-slate-50 shadow-sm">
+          <thead className="hidden md:table-header-group sticky top-0 z-10 bg-slate-50 shadow-sm">
             <tr className="border-b border-slate-100">
               <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-32">
                 <button
@@ -291,8 +291,9 @@ export default function TabelaRegistros() {
 
             {/* ── Linha de novo lançamento ── */}
             {novoAberto && (
-              <tr className="bg-blue-50 border-b border-blue-100">
-                <td className="px-5 py-2.5">
+              <tr className="bg-blue-50 border-b border-blue-100 flex flex-col md:table-row py-2 md:py-0">
+                <td className="px-5 py-2 md:py-2.5 flex flex-col md:table-cell gap-1">
+                  <span className="md:hidden font-semibold text-slate-500 text-xs">Data</span>
                   <input
                     type="date"
                     value={novoData}
@@ -300,7 +301,8 @@ export default function TabelaRegistros() {
                     className="w-full border border-blue-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
                   />
                 </td>
-                <td className="px-5 py-2.5">
+                <td className="px-5 py-2 md:py-2.5 flex flex-col md:table-cell gap-1">
+                  <span className="md:hidden font-semibold text-slate-500 text-xs">Produção</span>
                   <input
                     type="number"
                     placeholder="0,00"
@@ -310,7 +312,8 @@ export default function TabelaRegistros() {
                     step="0.01" min="0"
                   />
                 </td>
-                <td className="px-5 py-2.5">
+                <td className="px-5 py-2 md:py-2.5 flex flex-col md:table-cell gap-1">
+                  <span className="md:hidden font-semibold text-slate-500 text-xs">Refugo</span>
                   <input
                     type="number"
                     placeholder="0,00"
@@ -320,19 +323,21 @@ export default function TabelaRegistros() {
                     step="0.01" min="0"
                   />
                 </td>
-                <td className="px-5 py-2.5 text-right text-xs text-slate-400 font-mono">
-                  {novoTotal > 0 ? novoTotal.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) : "—"}
+                <td className="px-5 py-2 md:py-2.5 text-right text-xs text-slate-400 font-mono flex justify-between items-center md:table-cell">
+                  <span className="md:hidden font-semibold text-slate-500 font-sans">Total</span>
+                  <span>{novoTotal > 0 ? novoTotal.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) : "—"}</span>
                 </td>
-                <td className="px-5 py-2.5 text-center text-xs text-slate-400 font-mono">
-                  {novoTotal > 0 ? `${novoPct.toFixed(2)}%` : "—"}
+                <td className="px-5 py-2 md:py-2.5 text-center text-xs text-slate-400 font-mono flex justify-between items-center md:table-cell">
+                  <span className="md:hidden font-semibold text-slate-500 font-sans">% Refugo</span>
+                  <span>{novoTotal > 0 ? `${novoPct.toFixed(2)}%` : "—"}</span>
                 </td>
-                <td className="px-5 py-2.5">
-                  <div className="flex items-center justify-center gap-1.5">
-                    <button onClick={salvarNovo} disabled={salvando} className="p-1 text-emerald-600 hover:bg-emerald-100 rounded transition-colors disabled:opacity-50" title="Salvar">
-                      <Check className="w-3.5 h-3.5" />
+                <td className="px-5 py-3 md:py-2.5 flex justify-end items-center md:table-cell border-t md:border-0 border-blue-200 mt-2 md:mt-0">
+                  <div className="flex items-center justify-center gap-1.5 w-full md:w-auto">
+                    <button onClick={salvarNovo} disabled={salvando} className="flex-1 md:flex-none py-2 md:py-1 px-4 md:px-1 text-emerald-700 bg-emerald-100 hover:bg-emerald-200 rounded transition-colors disabled:opacity-50 flex justify-center items-center" title="Salvar">
+                      <Check className="w-4 h-4 md:w-3.5 md:h-3.5" />
                     </button>
-                    <button onClick={cancelarNovo} className="p-1 text-slate-400 hover:bg-slate-100 rounded transition-colors" title="Cancelar">
-                      <X className="w-3.5 h-3.5" />
+                    <button onClick={cancelarNovo} className="flex-1 md:flex-none py-2 md:py-1 px-4 md:px-1 text-slate-600 bg-slate-200 hover:bg-slate-300 rounded transition-colors flex justify-center items-center" title="Cancelar">
+                      <X className="w-4 h-4 md:w-3.5 md:h-3.5" />
                     </button>
                   </div>
                 </td>
@@ -362,8 +367,9 @@ export default function TabelaRegistros() {
 
               if (isEditing) {
                 return (
-                  <tr key={r.id} className="bg-amber-50 border-b border-amber-100">
-                    <td className="px-5 py-2.5">
+                  <tr key={r.id} className="bg-amber-50 border-b border-amber-100 flex flex-col md:table-row py-2 md:py-0">
+                    <td className="px-5 py-2 md:py-2.5 flex flex-col md:table-cell gap-1">
+                      <span className="md:hidden font-semibold text-slate-500 text-xs">Data</span>
                       <input
                         type="date"
                         value={editState.data}
@@ -371,7 +377,8 @@ export default function TabelaRegistros() {
                         className="w-full border border-amber-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white"
                       />
                     </td>
-                    <td className="px-5 py-2.5">
+                    <td className="px-5 py-2 md:py-2.5 flex flex-col md:table-cell gap-1">
+                      <span className="md:hidden font-semibold text-slate-500 text-xs">Produção</span>
                       <input
                         type="number"
                         value={editState.producao}
@@ -380,7 +387,8 @@ export default function TabelaRegistros() {
                         step="0.01" min="0"
                       />
                     </td>
-                    <td className="px-5 py-2.5">
+                    <td className="px-5 py-2 md:py-2.5 flex flex-col md:table-cell gap-1">
+                      <span className="md:hidden font-semibold text-slate-500 text-xs">Refugo</span>
                       <input
                         type="number"
                         value={editState.refugo}
@@ -389,21 +397,23 @@ export default function TabelaRegistros() {
                         step="0.01" min="0"
                       />
                     </td>
-                    <td className="px-5 py-2.5 text-right text-xs font-mono text-slate-600">
-                      {editTotal.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}
+                    <td className="px-5 py-2 md:py-2.5 text-right text-xs font-mono text-slate-600 flex justify-between items-center md:table-cell">
+                      <span className="md:hidden font-semibold text-slate-500 font-sans">Total</span>
+                      <span>{editTotal.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}</span>
                     </td>
-                    <td className="px-5 py-2.5 text-center">
+                    <td className="px-5 py-2 md:py-2.5 text-center flex justify-between items-center md:table-cell">
+                      <span className="md:hidden font-semibold text-slate-500">% Refugo</span>
                       <span className={cn("text-xs font-mono px-2 py-0.5 rounded-full", getPercentBadge(editPct, metaRefugo))}>
                         {editPct.toFixed(2)}%
                       </span>
                     </td>
-                    <td className="px-5 py-2.5">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button onClick={salvarEdicao} disabled={salvando} className="p-1 text-emerald-600 hover:bg-emerald-100 rounded transition-colors disabled:opacity-50" title="Salvar">
-                          <Check className="w-3.5 h-3.5" />
+                    <td className="px-5 py-3 md:py-2.5 flex justify-end items-center md:table-cell border-t md:border-0 border-amber-200 mt-2 md:mt-0">
+                      <div className="flex items-center justify-center gap-1.5 w-full md:w-auto">
+                        <button onClick={salvarEdicao} disabled={salvando} className="flex-1 md:flex-none py-2 md:py-1 px-4 md:px-1 text-emerald-700 bg-emerald-100 hover:bg-emerald-200 rounded transition-colors disabled:opacity-50 flex justify-center items-center" title="Salvar">
+                          <Check className="w-4 h-4 md:w-3.5 md:h-3.5" />
                         </button>
-                        <button onClick={() => setEditState(emptyEdit)} className="p-1 text-slate-400 hover:bg-slate-100 rounded transition-colors" title="Cancelar">
-                          <X className="w-3.5 h-3.5" />
+                        <button onClick={() => setEditState(emptyEdit)} className="flex-1 md:flex-none py-2 md:py-1 px-4 md:px-1 text-slate-600 bg-slate-200 hover:bg-slate-300 rounded transition-colors flex justify-center items-center" title="Cancelar">
+                          <X className="w-4 h-4 md:w-3.5 md:h-3.5" />
                         </button>
                       </div>
                     </td>
@@ -415,27 +425,35 @@ export default function TabelaRegistros() {
                 <tr
                   key={r.id}
                   className={cn(
-                    "border-b border-slate-50 hover:bg-slate-50 transition-colors group",
+                    "border-b border-slate-50 hover:bg-slate-50 transition-colors group flex flex-col md:table-row py-2 md:py-0",
                     idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"
                   )}
                 >
-                  <td className="px-5 py-3 text-xs font-medium text-slate-700">{formatData(r.data)}</td>
-                  <td className="px-5 py-3 text-right text-xs font-mono text-slate-700">
-                    {r.producao.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <td className="px-5 py-2 md:py-3 text-xs font-medium text-slate-700 flex justify-between items-center md:table-cell">
+                    <span className="md:hidden font-semibold text-slate-500">Data</span>
+                    <span>{formatData(r.data)}</span>
                   </td>
-                  <td className="px-5 py-3 text-right text-xs font-mono text-slate-700">
-                    {r.refugo.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <td className="px-5 py-2 md:py-3 text-right text-xs font-mono text-slate-700 flex justify-between items-center md:table-cell">
+                    <span className="md:hidden font-semibold text-slate-500 font-sans">Produção</span>
+                    <span>{r.producao.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </td>
-                  <td className="px-5 py-3 text-right text-xs font-mono text-slate-600">
-                    {total.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <td className="px-5 py-2 md:py-3 text-right text-xs font-mono text-slate-700 flex justify-between items-center md:table-cell">
+                    <span className="md:hidden font-semibold text-slate-500 font-sans">Refugo</span>
+                    <span>{r.refugo.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </td>
-                  <td className="px-5 py-3 text-center">
+                  <td className="px-5 py-2 md:py-3 text-right text-xs font-mono text-slate-600 flex justify-between items-center md:table-cell">
+                    <span className="md:hidden font-semibold text-slate-500 font-sans">Total</span>
+                    <span>{total.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </td>
+                  <td className="px-5 py-2 md:py-3 text-center flex justify-between items-center md:table-cell">
+                    <span className="md:hidden font-semibold text-slate-500">% Refugo</span>
                     <span className={cn("text-xs font-mono px-2 py-0.5 rounded-full", getPercentBadge(pct, metaRefugo))}>
                       {pct.toFixed(2)}%
                     </span>
                   </td>
-                  <td className="px-5 py-3">
-                    <div className="flex items-center justify-center gap-2">
+                  <td className="px-5 py-2 md:py-3 flex justify-between items-center md:table-cell border-t md:border-0 border-slate-100 mt-2 pt-3 md:mt-0 md:pt-3">
+                    <span className="md:hidden font-semibold text-slate-500">Ações</span>
+                    <div className="flex items-center justify-end md:justify-center gap-2">
                       <button
                         onClick={() => abrirModalMotivos(r)}
                         className={cn(
@@ -472,24 +490,28 @@ export default function TabelaRegistros() {
 
           {/* Totais */}
           {registros.length > 0 && (
-            <tfoot>
-              <tr className="bg-slate-100 border-t-2 border-slate-200">
-                <td className="px-5 py-3 text-xs font-bold text-slate-700 uppercase tracking-wider">Total</td>
-                <td className="px-5 py-3 text-right text-xs font-mono font-bold text-slate-800">
-                  {totalProducao.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <tfoot className="block md:table-footer-group mt-4 md:mt-0 border-t-2 border-slate-200">
+              <tr className="bg-slate-100 flex flex-col md:table-row py-2 md:py-0">
+                <td className="px-5 py-2 md:py-3 text-xs font-bold text-slate-700 uppercase tracking-wider text-center md:text-left border-b md:border-0 border-slate-200">Total Mensal</td>
+                <td className="px-5 py-2 md:py-3 text-right text-xs font-mono font-bold text-slate-800 flex justify-between items-center md:table-cell">
+                  <span className="md:hidden font-semibold text-slate-500 font-sans">Produção</span>
+                  <span>{totalProducao.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </td>
-                <td className="px-5 py-3 text-right text-xs font-mono font-bold text-slate-800">
-                  {totalRefugo.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <td className="px-5 py-2 md:py-3 text-right text-xs font-mono font-bold text-slate-800 flex justify-between items-center md:table-cell">
+                  <span className="md:hidden font-semibold text-slate-500 font-sans">Refugo</span>
+                  <span>{totalRefugo.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </td>
-                <td className="px-5 py-3 text-right text-xs font-mono font-bold text-slate-800">
-                  {totalGeral.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <td className="px-5 py-2 md:py-3 text-right text-xs font-mono font-bold text-slate-800 flex justify-between items-center md:table-cell">
+                  <span className="md:hidden font-semibold text-slate-500 font-sans">Total</span>
+                  <span>{totalGeral.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </td>
-                <td className="px-5 py-3 text-center">
+                <td className="px-5 py-2 md:py-3 text-center flex justify-between items-center md:table-cell">
+                  <span className="md:hidden font-semibold text-slate-500 font-sans">% Refugo</span>
                   <span className={cn("text-xs font-mono font-bold px-2 py-0.5 rounded-full", getPercentBadge(percentTotal, metaRefugo))}>
                     {percentTotal.toFixed(2)}%
                   </span>
                 </td>
-                <td />
+                <td className="hidden md:table-cell" />
               </tr>
             </tfoot>
           )}

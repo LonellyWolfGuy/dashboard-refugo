@@ -58,23 +58,67 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   });
 
   const mConfig = config || { metaRefugo: META_REFUGO_PERCENT, motivos: [] };
-  const meses = montarMeses(registros, anoAtual);
+  const meses = React.useMemo(() => montarMeses(registros, anoAtual), [registros, anoAtual]);
   const carregando = carregandoRegistros || carregandoConfig;
 
-  // Mutations
+  // Mutations com Optimistic Updates
   const addMutation = useMutation({
     mutationFn: ({ mes, ano, req }: any) => refugoService.inserirRegistro(mes, ano, req),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["registros", anoAtual] }) },
+    onMutate: async ({ mes, ano, req }: any) => {
+      await queryClient.cancelQueries({ queryKey: ["registros", anoAtual] });
+      const previous = queryClient.getQueryData<DailyRecord[]>(["registros", anoAtual]);
+      if (previous) {
+        const tempRecord = { ...req, id: `temp-${Date.now()}` };
+        queryClient.setQueryData<DailyRecord[]>(["registros", anoAtual], old => [...(old || []), tempRecord]);
+      }
+      return { previous };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["registros", anoAtual], context.previous);
+      }
+    },
+    onSettled: () => { queryClient.invalidateQueries({ queryKey: ["registros", anoAtual] }) },
   });
 
   const editMutation = useMutation({
     mutationFn: ({ id, req }: any) => refugoService.atualizarRegistro(id, req),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["registros", anoAtual] }) },
+    onMutate: async ({ id, req }: any) => {
+      await queryClient.cancelQueries({ queryKey: ["registros", anoAtual] });
+      const previous = queryClient.getQueryData<DailyRecord[]>(["registros", anoAtual]);
+      if (previous) {
+        queryClient.setQueryData<DailyRecord[]>(["registros", anoAtual], old => 
+          (old || []).map(r => r.id === id ? { ...r, ...req } : r)
+        );
+      }
+      return { previous };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["registros", anoAtual], context.previous);
+      }
+    },
+    onSettled: () => { queryClient.invalidateQueries({ queryKey: ["registros", anoAtual] }) },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => refugoService.deletarRegistro(id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["registros", anoAtual] }) },
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ["registros", anoAtual] });
+      const previous = queryClient.getQueryData<DailyRecord[]>(["registros", anoAtual]);
+      if (previous) {
+        queryClient.setQueryData<DailyRecord[]>(["registros", anoAtual], old => 
+          (old || []).filter(r => r.id !== id)
+        );
+      }
+      return { previous };
+    },
+    onError: (err, id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["registros", anoAtual], context.previous);
+      }
+    },
+    onSettled: () => { queryClient.invalidateQueries({ queryKey: ["registros", anoAtual] }) },
   });
 
   const configMutation = useMutation({
