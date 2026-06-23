@@ -497,6 +497,168 @@ function SlideClima({ dadosClima }: SlideClimaProps) {
   );
 }
 
+// ─── Sub-componente: Slide de Aniversariantes ──────────────────────────────────
+
+const ANIVERSARIANTES = [
+  { nome: "Anderson Dias Cezar", nascimento: "01/11/1982", admissao: "04/02/2019" },
+  { nome: "Anderson Pereira de Souza", nascimento: "02/12/1985", admissao: "27/09/2016" },
+  { nome: "Ari de Jesus Martins Ribeiro", nascimento: "15/05/1966", admissao: "09/09/2024" },
+  { nome: "Cleidivan Alves Rodrigues", nascimento: "03/12/2005", admissao: "24/07/2024" },
+  { nome: "Daniel Menezes Cordeiro Junior", nascimento: "25/12/2000", admissao: "22/08/2024" },
+  { nome: "Edson Rieg", nascimento: "07/02/1989", admissao: "12/06/2025" },
+  { nome: "Fernanda de Oliveira Buch", nascimento: "25/08/1989", admissao: "05/01/2026" },
+  { nome: "Jaziel Santana da Silva", nascimento: "20/05/1960", admissao: "—" },
+  { nome: "Jean Carlos Vicente", nascimento: "28/09/1993", admissao: "22/05/2023" },
+  { nome: "Jeniffer Rosangela de Souza Hug Walter", nascimento: "04/09/1986", admissao: "01/07/2005" },
+  { nome: "Jesse Santana da Silva", nascimento: "20/04/1953", admissao: "01/02/2024" },
+  { nome: "Jonas Ramos da Silva", nascimento: "24/09/1985", admissao: "29/05/2018" },
+  { nome: "Jorge Juan Pinto Coelho", nascimento: "08/04/2005", admissao: "23/03/2026" },
+  { nome: "Kayke Pablo Beil Kalfels", nascimento: "01/10/2004", admissao: "06/01/2025" },
+  { nome: "Maycon Sena Bezerra", nascimento: "02/07/2006", admissao: "16/07/2024" },
+  { nome: "Odenir Rassweiler", nascimento: "14/09/1967", admissao: "17/01/2022" },
+  { nome: "Paulo Otavio Santos de Oliveira", nascimento: "01/12/2006", admissao: "11/05/2026" },
+  { nome: "Renato Lemos Correa", nascimento: "07/12/1987", admissao: "15/07/2021" },
+  { nome: "Thayna Dorneles da Silveira", nascimento: "10/06/1999", admissao: "10/03/2026" },
+  { nome: "Thiago Fischer", nascimento: "28/03/1985", admissao: "03/09/2018" },
+  { nome: "Veralucia da Silva Alves de Oliveira", nascimento: "14/02/1972", admissao: "01/08/1999" },
+  { nome: "Victor Alves de Lima", nascimento: "26/09/1999", admissao: "19/04/2022" },
+];
+
+function nascimentoParaMes(dataStr: string): number {
+  return parseInt(dataStr.split("/")[1], 10);
+}
+
+function formatarDataBR(dataStr: string): string {
+  const [dia, mes] = dataStr.split("/");
+  return `${dia}/${mes}`;
+}
+
+function SlideAniversariantes() {
+  const [agora, setAgora] = useState(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setAgora(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const mesAtual = agora.getMonth() + 1;
+  const aniversariantes = ANIVERSARIANTES.filter(
+    p => nascimentoParaMes(p.nascimento) === mesAtual
+  );
+
+  const sorted = [...aniversariantes].sort(
+    (a, b) => parseInt(a.nascimento.split("/")[0], 10) - parseInt(b.nascimento.split("/")[0], 10)
+  );
+
+  const hora = agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const data = agora.toLocaleDateString("pt-BR", {
+    weekday: "long", day: "2-digit", month: "long",
+  });
+
+  return (
+    <div className="flex flex-col h-full overflow-hidden" style={{ background: "linear-gradient(135deg, #1a0a2e 0%, #2d1b4e 40%, #16213e 100%)" }}>
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background: "radial-gradient(ellipse 60% 40% at 50% 0%, rgba(236,72,153,0.12), transparent), radial-gradient(ellipse 80% 50% at 50% 100%, rgba(168,85,247,0.08), transparent)",
+      }} />
+
+      <div className="relative z-10 flex items-start justify-between px-10 pt-6">
+        <div>
+          <p className="uppercase tracking-widest font-bold"
+            style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.85rem, 1.2vw, 1.1rem)" }}>
+            Implatec — Aniversariantes
+          </p>
+          <h2 className="font-black text-white capitalize leading-none mt-1"
+            style={{ fontSize: "clamp(1.8rem, 3vw, 2.8rem)" }}>
+            {MESES_NOMES[mesAtual - 1]}
+          </h2>
+        </div>
+        <div className="flex flex-col items-end">
+          <span className="font-mono font-black text-white tabular-nums leading-none"
+            style={{ fontSize: "clamp(3.5rem, 6vw, 5rem)" }}>
+            {hora}
+          </span>
+          <p className="capitalize text-slate-400 font-medium"
+            style={{ fontSize: "clamp(0.8rem, 1.3vw, 1.1rem)" }}>
+            {data}
+          </p>
+        </div>
+      </div>
+
+      {sorted.length > 0 ? (
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-14 pb-6 gap-5">
+          <div style={{
+            width: 64, height: 64,
+            background: "rgba(236,72,153,0.15)",
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "clamp(2rem, 4vw, 3rem)",
+          }}>
+            🎂
+          </div>
+
+          <div className="grid gap-5 w-full" style={{
+            gridTemplateColumns: sorted.length === 1 ? "1fr" : "repeat(auto-fit, minmax(320px, 1fr))",
+            maxWidth: sorted.length <= 2 ? "800px" : "1200px",
+          }}>
+            {sorted.map((p) => (
+              <div key={p.nome} className="rounded-3xl px-8 py-6 text-center"
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(236,72,153,0.2)",
+                  backdropFilter: "blur(8px)",
+                }}>
+                <p className="font-black text-white leading-tight"
+                  style={{ fontSize: "clamp(1.6rem, 3vw, 2.4rem)" }}>
+                  {p.nome}
+                </p>
+                <div className="flex items-center justify-center gap-6 mt-4">
+                  <div>
+                    <p className="uppercase tracking-widest font-semibold"
+                      style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.6rem, 0.9vw, 0.75rem)" }}>
+                      Nascimento
+                    </p>
+                    <p className="font-bold font-mono tabular-nums"
+                      style={{ color: "rgba(244,114,182,0.9)", fontSize: "clamp(1.2rem, 2vw, 1.6rem)" }}>
+                      {formatarDataBR(p.nascimento)}
+                    </p>
+                  </div>
+                  <div style={{ width: 1, height: 32, background: "rgba(255,255,255,0.1)" }} />
+                  <div>
+                    <p className="uppercase tracking-widest font-semibold"
+                      style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.6rem, 0.9vw, 0.75rem)" }}>
+                      Admissão
+                    </p>
+                    <p className="font-bold font-mono tabular-nums"
+                      style={{ color: "rgba(148,163,184,0.9)", fontSize: "clamp(1.2rem, 2vw, 1.6rem)" }}>
+                      {p.admissao}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center gap-4">
+          <p className="font-black text-white/20" style={{ fontSize: "clamp(3rem, 6vw, 5rem)" }}>
+            🎈
+          </p>
+          <p className="font-semibold text-center"
+            style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(1.5rem, 3vw, 2.5rem)" }}>
+            Nenhum aniversariante este mês
+          </p>
+        </div>
+      )}
+
+      <div style={{
+        height: 3,
+        background: "linear-gradient(90deg, #ec4899, #a855f7, transparent)",
+      }} />
+    </div>
+  );
+}
+
 // ─── Sub-componente: Slide de Imagem ──────────────────────────────────────────
 
 interface SlideImagemProps {
@@ -583,12 +745,13 @@ export default function ModoTV({ tvState }: ModoTVProps) {
     };
   }, []);
 
-  const totalSlides = 2 + totalImagens;
-  const indiceGlobal = tipoSlide === "dashboard" ? 0 : tipoSlide === "clima" ? 1 : indiceImagem + 2;
+  const totalSlides = 3 + totalImagens;
+  const indiceGlobal = tipoSlide === "dashboard" ? 0 : tipoSlide === "clima" ? 1 : tipoSlide === "aniversariantes" ? 2 : indiceImagem + 3;
 
   const barCor =
     tipoSlide === "dashboard" ? "linear-gradient(90deg,#1d4ed8,#60a5fa)" :
     tipoSlide === "clima" ? "linear-gradient(90deg,#7c3aed,#a78bfa)" :
+    tipoSlide === "aniversariantes" ? "linear-gradient(90deg,#ec4899,#a855f7)" :
     "linear-gradient(90deg,#16a34a,#4ade80)";
 
   return (
@@ -599,6 +762,8 @@ export default function ModoTV({ tvState }: ModoTVProps) {
           <SlideDashboard />
         ) : tipoSlide === "clima" ? (
           <SlideClima dadosClima={dadosClima} />
+        ) : tipoSlide === "aniversariantes" ? (
+          <SlideAniversariantes />
         ) : slideImagem ? (
           <SlideImagem urlPublica={slideImagem.url_publica} titulo={slideImagem.titulo} legenda={slideImagem.legenda} />
         ) : (

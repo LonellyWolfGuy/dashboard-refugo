@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { listarSlides, MuralSlide } from "@/services/muralService";
 import { buscarClima, DadosClima } from "@/services/weatherService";
 
-export type TipoSlide = "dashboard" | "clima" | "imagem";
+export type TipoSlide = "dashboard" | "clima" | "aniversariantes" | "imagem";
 
 export interface TVModeState {
   isTVMode: boolean;
@@ -22,6 +22,7 @@ const TV_SEG_IMAGEM_KEY    = "tv_seg_imagem";
 const DEFAULT_SEG_DASHBOARD = 30;
 const DEFAULT_SEG_IMAGEM    = 15;
 const SEG_CLIMA = 20;
+const SEG_ANIVERSARIANTES = 20;
 
 function getConfig() {
   const d = parseInt(localStorage.getItem(TV_SEG_DASHBOARD_KEY) ?? "", 10);
@@ -64,6 +65,11 @@ export function useTVMode(): TVModeState {
       indiceImagemRef.current = 0;
       setIndiceImagem(0);
     } else if (tipoAtualRef.current === "clima") {
+      tipoAtualRef.current = "aniversariantes";
+      setTipoSlide("aniversariantes");
+      indiceImagemRef.current = 0;
+      setIndiceImagem(0);
+    } else if (tipoAtualRef.current === "aniversariantes") {
       if (imgs.length > 0) {
         tipoAtualRef.current = "imagem";
         setTipoSlide("imagem");
@@ -104,6 +110,7 @@ export function useTVMode(): TVModeState {
       const duracao =
         tipoAtualRef.current === "dashboard" ? cfg.segDashboard * 1000 :
         tipoAtualRef.current === "clima" ? SEG_CLIMA * 1000 :
+        tipoAtualRef.current === "aniversariantes" ? SEG_ANIVERSARIANTES * 1000 :
         cfg.segImagem * 1000;
 
       progressoRef.current += TICK_MS;
