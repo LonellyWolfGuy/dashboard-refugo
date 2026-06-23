@@ -1,21 +1,18 @@
-// ModoTV.tsx
-// Componente de tela cheia do Modo TV.
-// Alterna entre um slide de dashboard (KPIs + relógio) e slides de imagem da fábrica.
-// Design: fundo escuro premium, tipografia grande, legível de longe em TVs industriais.
+// ModoTV.tsx — V2 redesign
+// Design premium para TV industrial:
+// • % Refugo como HERO metric (enorme, cor dinâmica)
+// • Barra de progresso circular animada vs meta
+// • Fundo com glow colorido por status
+// • Animação de contagem (count-up) ao entrar no slide
+// • Métricas secundárias limpas e legíveis de longe
+// • Relógio proeminente
+// • Slide de imagem com transição cinematográfica
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDashboard } from "@/contexts/DashboardContext";
 import { useTVMode } from "@/hooks/useTVMode";
 import { MESES_NOMES } from "@/lib/initialData";
-import {
-  X,
-  Package,
-  AlertTriangle,
-  CheckCircle,
-  Target,
-  ChevronRight,
-  Monitor,
-} from "lucide-react";
+import { X, ChevronRight, TrendingDown, TrendingUp, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -23,106 +20,152 @@ function formatNum(n: number): string {
   return n.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
 }
 
+// Hook de count-up animado
+function useCountUp(target: number, duration = 1200): number {
+  const [value, setValue] = useState(0);
+  const rafRef = useRef<number>(0);
+
+  useEffect(() => {
+    let start: number | null = null;
+    const initial = 0;
+
+    const step = (ts: number) => {
+      if (!start) start = ts;
+      const elapsed = ts - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease out cubic
+      const ease = 1 - Math.pow(1 - progress, 3);
+      setValue(initial + (target - initial) * ease);
+      if (progress < 1) rafRef.current = requestAnimationFrame(step);
+    };
+
+    rafRef.current = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [target, duration]);
+
+  return value;
+}
+
+// ─── Arco SVG de progresso circular ──────────────────────────────────────────
+
+interface ArcProgressProps {
+  percent: number;   // valor atual (0–100)
+  meta: number;      // meta (0–100)
+  cor: string;       // cor do arco preenchido
+  corMeta: string;   // cor da marca de meta
+  size?: number;
+}
+
+function ArcProgress({ percent, meta, cor, corMeta, size = 280 }: ArcProgressProps) {
+  const radius = (size - 24) / 2;
+  const circum = 2 * Math.PI * radius;
+  // Arco de 240° (de -210° a 30°, partindo do centro inferior)
+  const arcFrac = 240 / 360;
+  const arcLength = circum * arcFrac;
+
+  const filled = Math.min(percent / 100, 1) * arcLength;
+  const metaMark = (meta / 100) * arcLength;
+
+  const cx = size / 2;
+  const cy = size / 2;
+  const startAngle = -210; // graus
+
+  // Transforma ângulo em offsets no círculo
+  const rotate = `rotate(${startAngle}, ${cx}, ${cy})`;
+
+  return (
+    <svg width={size} height={size} style={{ overflow: "visible" }}>
+      {/* Trilha de fundo */}
+      <circle
+        cx={cx} cy={cy} r={radius}
+        fill="none"
+        stroke="rgba(255,255,255,0.08)"
+        strokeWidth={20}
+        strokeDasharray={`${arcLength} ${circum}`}
+        strokeLinecap="round"
+        transform={rotate}
+        style={{ transition: "stroke-dashoffset 0.6s ease" }}
+      />
+      {/* Arco preenchido */}
+      <circle
+        cx={cx} cy={cy} r={radius}
+        fill="none"
+        stroke={cor}
+        strokeWidth={20}
+        strokeDasharray={`${filled} ${circum}`}
+        strokeLinecap="round"
+        transform={rotate}
+        style={{ transition: "stroke-dasharray 1.2s cubic-bezier(0.34,1.56,0.64,1), stroke 0.6s ease" }}
+      />
+      {/* Marca de meta */}
+      <circle
+        cx={cx} cy={cy} r={radius}
+        fill="none"
+        stroke={corMeta}
+        strokeWidth={4}
+        strokeDasharray={`2 ${circum}`}
+        strokeDashoffset={-metaMark + 1}
+        transform={rotate}
+        opacity={0.9}
+      />
+    </svg>
+  );
+}
+
 // ─── Sub-componente: Relógio ──────────────────────────────────────────────────
 
 function RelogioTV() {
   const [agora, setAgora] = useState(new Date());
-
   useEffect(() => {
     const t = setInterval(() => setAgora(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
 
-  const hora = agora.toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+  const hora = agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const seg  = agora.toLocaleTimeString("pt-BR", { second: "2-digit" });
   const data = agora.toLocaleDateString("pt-BR", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
+    weekday: "long", day: "2-digit", month: "long",
   });
 
   return (
-    <div className="text-right">
-      <p
-        className="font-mono font-bold text-white tabular-nums"
-        style={{ fontSize: "clamp(2rem, 4vw, 3.5rem)", lineHeight: 1 }}
-      >
-        {hora}
-      </p>
-      <p
-        className="text-slate-400 capitalize mt-1"
-        style={{ fontSize: "clamp(0.75rem, 1.2vw, 1rem)" }}
-      >
+    <div className="flex flex-col items-end">
+      <div className="flex items-end gap-1 leading-none">
+        <span className="font-mono font-black text-white tabular-nums"
+          style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)" }}>
+          {hora}
+        </span>
+        <span className="font-mono font-bold text-slate-400 tabular-nums mb-1"
+          style={{ fontSize: "clamp(1.2rem, 2.5vw, 2rem)" }}>
+          :{seg}
+        </span>
+      </div>
+      <p className="capitalize text-slate-400 font-medium"
+        style={{ fontSize: "clamp(0.7rem, 1.1vw, 0.9rem)" }}>
         {data}
       </p>
     </div>
   );
 }
 
-// ─── Sub-componente: KPI Card TV ──────────────────────────────────────────────
+// ─── Sub-componente: Métrica Secundária ───────────────────────────────────────
 
-interface KpiTVProps {
-  titulo: string;
+interface MetricaProps {
+  label: string;
   valor: string;
-  subtitulo?: string;
-  cor: "azul" | "verde" | "amarelo" | "vermelho" | "cinza";
-  icone: React.ReactNode;
+  cor: string;
 }
 
-function KpiCardTV({ titulo, valor, subtitulo, cor, icone }: KpiTVProps) {
-  const mapa = {
-    azul:     { borda: "#1e40af", texto: "#93c5fd", valor: "#dbeafe" },
-    verde:    { borda: "#16a34a", texto: "#86efac", valor: "#dcfce7" },
-    amarelo:  { borda: "#d97706", texto: "#fcd34d", valor: "#fef3c7" },
-    vermelho: { borda: "#dc2626", texto: "#fca5a5", valor: "#fee2e2" },
-    cinza:    { borda: "#475569", texto: "#94a3b8", valor: "#e2e8f0" },
-  };
-  const c = mapa[cor];
-
+function Metrica({ label, valor, cor }: MetricaProps) {
   return (
-    <div
-      className="rounded-2xl flex flex-col gap-3 p-6"
-      style={{
-        background: "rgba(255,255,255,0.05)",
-        border: `2px solid ${c.borda}`,
-        backdropFilter: "blur(8px)",
-      }}
-    >
-      <div className="flex items-center gap-3">
-        <div
-          className="rounded-xl p-3 flex items-center justify-center"
-          style={{ background: c.borda }}
-        >
-          <div className="text-white" style={{ width: 28, height: 28 }}>
-            {icone}
-          </div>
-        </div>
-        <p
-          className="font-semibold uppercase tracking-widest"
-          style={{ color: c.texto, fontSize: "clamp(0.65rem, 1vw, 0.85rem)" }}
-        >
-          {titulo}
-        </p>
-      </div>
-      <p
-        className="font-bold font-mono tabular-nums"
-        style={{
-          color: c.valor,
-          fontSize: "clamp(2rem, 4.5vw, 4rem)",
-          lineHeight: 1,
-        }}
-      >
+    <div className="flex flex-col gap-1 px-6 py-4 rounded-2xl"
+      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+      <span className="uppercase tracking-widest font-semibold"
+        style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.55rem, 0.9vw, 0.75rem)" }}>
+        {label}
+      </span>
+      <span className="font-black font-mono tabular-nums" style={{ color: cor, fontSize: "clamp(1.6rem, 3.5vw, 2.8rem)", lineHeight: 1 }}>
         {valor}
-      </p>
-      {subtitulo && (
-        <p style={{ color: c.texto, fontSize: "clamp(0.7rem, 1vw, 0.9rem)" }}>
-          {subtitulo}
-        </p>
-      )}
+      </span>
     </div>
   );
 }
@@ -132,91 +175,149 @@ function KpiCardTV({ titulo, valor, subtitulo, cor, icone }: KpiTVProps) {
 function SlideDashboard() {
   const { mesAtual, anoAtual, getTotaisMes, metaRefugo, meses } = useDashboard();
   const totais = getTotaisMes(mesAtual);
-  const diasRegistrados = meses.find((m) => m.mes === mesAtual)?.registros.length ?? 0;
+  const diasRegistrados = meses.find(m => m.mes === mesAtual)?.registros.length ?? 0;
 
-  let corPercent: "verde" | "amarelo" | "vermelho" | "cinza" = "cinza";
-  if (totais.percentRefugo > 0) {
-    if (totais.percentRefugo <= metaRefugo * 0.8) corPercent = "verde";
-    else if (totais.percentRefugo <= metaRefugo) corPercent = "amarelo";
-    else corPercent = "vermelho";
-  }
+  // Status baseado na meta
+  const pct = totais.percentRefugo;
+  const temDados = pct > 0;
+  const status: "ok" | "atencao" | "critico" | "vazio" =
+    !temDados ? "vazio" :
+    pct <= metaRefugo * 0.8 ? "ok" :
+    pct <= metaRefugo ? "atencao" : "critico";
 
-  const iconePercent =
-    totais.percentRefugo === 0 ? (
-      <Target style={{ width: 28, height: 28 }} />
-    ) : totais.percentRefugo <= metaRefugo ? (
-      <CheckCircle style={{ width: 28, height: 28 }} />
-    ) : (
-      <AlertTriangle style={{ width: 28, height: 28 }} />
-    );
+  const palette = {
+    ok:      { hero: "#22c55e", glow: "rgba(34,197,94,0.18)",  texto: "#86efac", fundo: "rgba(34,197,94,0.06)"  },
+    atencao: { hero: "#f59e0b", glow: "rgba(245,158,11,0.18)", texto: "#fcd34d", fundo: "rgba(245,158,11,0.06)" },
+    critico: { hero: "#ef4444", glow: "rgba(239,68,68,0.22)",  texto: "#fca5a5", fundo: "rgba(239,68,68,0.08)"  },
+    vazio:   { hero: "#64748b", glow: "rgba(100,116,139,0.1)", texto: "#94a3b8", fundo: "rgba(100,116,139,0.04)" },
+  };
+  const p = palette[status];
+
+  const pctAnimado = useCountUp(pct, 1400);
+  const producaoAnimada = useCountUp(totais.totalProducao, 1200);
+  const refugoAnimado = useCountUp(totais.totalRefugo, 1200);
+  const totalAnimado = useCountUp(totais.total, 1200);
+
+  const StatusIcon = status === "ok" ? CheckCircle2 : status === "critico" ? AlertTriangle : TrendingUp;
 
   return (
-    <div className="flex flex-col h-full px-10 py-8 gap-8">
-      {/* Cabeçalho */}
-      <div className="flex items-start justify-between">
+    <div className="flex flex-col h-full overflow-hidden" style={{ background: "#080C18" }}>
+
+      {/* Glow de status no fundo */}
+      <div className="absolute inset-0 pointer-events-none"
+        style={{
+          background: `radial-gradient(ellipse 70% 50% at 50% 100%, ${p.glow}, transparent)`,
+          transition: "background 1s ease",
+        }} />
+
+      {/* Header */}
+      <div className="relative z-10 flex items-center justify-between px-10 pt-8 pb-4">
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <Monitor className="text-blue-400" style={{ width: 28, height: 28 }} />
-            <span
-              className="font-bold text-slate-400 uppercase tracking-widest"
-              style={{ fontSize: "clamp(0.7rem, 1.1vw, 0.9rem)" }}
-            >
-              Controle de Refugo — Implatec Perfis Plásticos
-            </span>
-          </div>
-          <h1
-            className="font-bold text-white"
-            style={{ fontSize: "clamp(2rem, 5vw, 4.5rem)", lineHeight: 1.1 }}
-          >
+          <p className="uppercase tracking-[0.25em] font-bold"
+            style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.6rem, 0.9vw, 0.8rem)" }}>
+            Implatec Perfis Plásticos — Controle de Refugo
+          </p>
+          <h1 className="font-black text-white capitalize"
+            style={{ fontSize: "clamp(1.8rem, 3.5vw, 3rem)", lineHeight: 1.1 }}>
             {MESES_NOMES[mesAtual - 1]}{" "}
-            <span className="text-slate-500">{anoAtual}</span>
+            <span style={{ color: "rgba(255,255,255,0.25)" }}>{anoAtual}</span>
           </h1>
         </div>
         <RelogioTV />
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-5 flex-1">
-        <KpiCardTV
-          titulo="Produção Total"
-          valor={formatNum(totais.totalProducao)}
-          subtitulo={`${diasRegistrados} dia${diasRegistrados !== 1 ? "s" : ""} registrado${diasRegistrados !== 1 ? "s" : ""}`}
-          cor="azul"
-          icone={<Package style={{ width: 28, height: 28 }} />}
-        />
-        <KpiCardTV
-          titulo="Total Refugo"
-          valor={formatNum(totais.totalRefugo)}
-          subtitulo="unidades refugadas"
-          cor={totais.totalRefugo === 0 ? "cinza" : "vermelho"}
-          icone={<AlertTriangle style={{ width: 28, height: 28 }} />}
-        />
-        <KpiCardTV
-          titulo="Total Geral"
-          valor={formatNum(totais.total)}
-          subtitulo="produção + refugo"
-          cor="cinza"
-          icone={<Package style={{ width: 28, height: 28 }} />}
-        />
-        <KpiCardTV
-          titulo="% Refugo"
-          valor={
-            totais.percentRefugo > 0
-              ? `${totais.percentRefugo.toFixed(2)}%`
-              : "—"
-          }
-          subtitulo={`Meta: ≤ ${metaRefugo}%`}
-          cor={corPercent}
-          icone={iconePercent}
-        />
+      {/* Corpo principal */}
+      <div className="relative z-10 flex flex-1 items-center justify-center gap-12 px-10 pb-6">
+
+        {/* Hero: arco + % refugo */}
+        <div className="flex flex-col items-center justify-center flex-shrink-0" style={{ position: "relative" }}>
+          <ArcProgress
+            percent={pct}
+            meta={metaRefugo}
+            cor={p.hero}
+            corMeta="rgba(255,255,255,0.5)"
+            size={320}
+          />
+          {/* Valor centralizado sobre o arco */}
+          <div className="absolute flex flex-col items-center" style={{ top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}>
+            <span className="font-black font-mono tabular-nums leading-none"
+              style={{ color: p.hero, fontSize: "clamp(3rem, 7vw, 5.5rem)", textShadow: `0 0 40px ${p.hero}` }}>
+              {temDados ? `${pctAnimado.toFixed(1)}%` : "—"}
+            </span>
+            <span className="uppercase tracking-widest font-bold mt-1"
+              style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.55rem, 0.85vw, 0.75rem)" }}>
+              % Refugo
+            </span>
+          </div>
+
+          {/* Badge de status */}
+          <div className="flex items-center gap-2 mt-3 px-4 py-2 rounded-full"
+            style={{ background: p.fundo, border: `1px solid ${p.hero}40` }}>
+            <StatusIcon style={{ width: 16, height: 16, color: p.hero }} />
+            <span className="font-bold uppercase tracking-wider"
+              style={{ color: p.texto, fontSize: "clamp(0.6rem, 0.95vw, 0.8rem)" }}>
+              {status === "ok" ? "Dentro da Meta" :
+               status === "atencao" ? "Atenção — Próximo da Meta" :
+               status === "critico" ? "Acima da Meta!" : "Sem dados"}
+            </span>
+          </div>
+
+          {/* Meta */}
+          <p className="mt-2 font-semibold"
+            style={{ color: "rgba(255,255,255,0.25)", fontSize: "clamp(0.6rem, 0.9vw, 0.75rem)" }}>
+            Meta: ≤ {metaRefugo}%  •  {diasRegistrados} dia{diasRegistrados !== 1 ? "s" : ""} registrado{diasRegistrados !== 1 ? "s" : ""}
+          </p>
+        </div>
+
+        {/* Métricas secundárias — coluna */}
+        <div className="flex flex-col gap-4 flex-1 max-w-xs">
+          <Metrica label="Produção Total" valor={formatNum(producaoAnimada)} cor="#60a5fa" />
+          <Metrica label="Total Refugo"   valor={formatNum(refugoAnimado)}   cor={totais.totalRefugo > 0 ? "#f87171" : "#64748b"} />
+          <Metrica label="Total Geral"    valor={formatNum(totalAnimado)}    cor="#e2e8f0" />
+
+          {/* Barra linear refugo/produção */}
+          <div className="rounded-2xl px-6 py-4"
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div className="flex justify-between mb-2">
+              <span className="uppercase tracking-widest font-semibold"
+                style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.55rem, 0.9vw, 0.7rem)" }}>
+                Refugo vs Produção
+              </span>
+              <span style={{ color: p.texto, fontSize: "clamp(0.55rem, 0.9vw, 0.7rem)", fontWeight: 700 }}>
+                {temDados ? `${pct.toFixed(1)}%` : "—"}
+              </span>
+            </div>
+            <div className="rounded-full overflow-hidden" style={{ height: 10, background: "rgba(255,255,255,0.08)" }}>
+              <div className="h-full rounded-full"
+                style={{
+                  width: `${Math.min(pct / (metaRefugo * 1.5) * 100, 100)}%`,
+                  background: `linear-gradient(90deg, ${p.hero}99, ${p.hero})`,
+                  transition: "width 1.4s cubic-bezier(0.34,1.56,0.64,1)",
+                }} />
+            </div>
+            {/* Marcador da meta */}
+            <div className="relative h-0 mt-0">
+              <div style={{
+                position: "absolute",
+                left: `${Math.min((metaRefugo / (metaRefugo * 1.5)) * 100, 100)}%`,
+                top: -14,
+                transform: "translateX(-50%)",
+                color: "rgba(255,255,255,0.5)",
+                fontSize: 9,
+                fontWeight: 700,
+                letterSpacing: "0.1em",
+              }}>
+                META
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Rodapé informativo */}
-      <div
-        className="text-center text-slate-600 font-medium"
-        style={{ fontSize: "clamp(0.65rem, 0.9vw, 0.8rem)" }}
-      >
-        Implatec Perfis Plásticos ® — Sistema de Controle de Qualidade
+      {/* Rodapé */}
+      <div className="relative z-10 text-center pb-3"
+        style={{ color: "rgba(255,255,255,0.12)", fontSize: "clamp(0.55rem, 0.8vw, 0.7rem)", fontWeight: 600, letterSpacing: "0.15em" }}>
+        IMPLATEC PERFIS PLÁSTICOS ® — SISTEMA DE CONTROLE DE QUALIDADE
       </div>
     </div>
   );
@@ -232,54 +333,46 @@ interface SlideImagemProps {
 
 function SlideImagem({ urlPublica, titulo, legenda }: SlideImagemProps) {
   return (
-    <div className="relative w-full h-full overflow-hidden">
-      {/* Imagem de fundo */}
+    <div className="relative w-full h-full overflow-hidden" style={{ background: "#000" }}>
       <img
         src={urlPublica}
         alt={titulo}
-        className="absolute inset-0 w-full h-full object-cover"
+        className="absolute inset-0 w-full h-full"
+        style={{ objectFit: "cover", opacity: 0.88 }}
       />
 
-      {/* Gradiente de baixo para cima para o texto */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 40%, transparent 70%)",
-        }}
-      />
+      {/* Gradientes */}
+      <div className="absolute inset-0" style={{
+        background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.2) 45%, rgba(0,0,0,0.35) 100%)"
+      }} />
 
-      {/* Logo / empresa no topo */}
-      <div className="absolute top-8 left-10 flex items-center gap-3">
-        <Monitor className="text-white/70" style={{ width: 22, height: 22 }} />
-        <span
-          className="text-white/70 font-semibold tracking-widest uppercase"
-          style={{ fontSize: "clamp(0.6rem, 0.9vw, 0.8rem)" }}
-        >
+      {/* Marca no topo */}
+      <div className="absolute top-8 left-10">
+        <p className="uppercase font-bold tracking-[0.3em]"
+          style={{ color: "rgba(255,255,255,0.5)", fontSize: "clamp(0.6rem, 0.9vw, 0.8rem)" }}>
           Implatec Perfis Plásticos
-        </span>
+        </p>
       </div>
 
-      {/* Texto sobreposto na base */}
-      <div className="absolute bottom-0 left-0 right-0 px-12 pb-12">
-        <h2
-          className="font-bold text-white"
+      {/* Texto na base */}
+      <div className="absolute bottom-0 left-0 right-0 px-14 pb-14">
+        {/* Linha decorativa */}
+        <div className="mb-5" style={{ width: 60, height: 4, borderRadius: 2, background: "white", opacity: 0.6 }} />
+        <h2 className="font-black text-white"
           style={{
-            fontSize: "clamp(2rem, 5vw, 4.5rem)",
-            lineHeight: 1.1,
-            textShadow: "0 2px 20px rgba(0,0,0,0.8)",
-          }}
-        >
+            fontSize: "clamp(2.5rem, 6vw, 5.5rem)",
+            lineHeight: 1.05,
+            textShadow: "0 4px 32px rgba(0,0,0,0.9)",
+            letterSpacing: "-0.01em",
+          }}>
           {titulo}
         </h2>
         {legenda && (
-          <p
-            className="text-white/80 mt-3 font-medium"
+          <p className="mt-4 font-semibold text-white/70"
             style={{
-              fontSize: "clamp(1rem, 2vw, 1.75rem)",
-              textShadow: "0 2px 12px rgba(0,0,0,0.8)",
-            }}
-          >
+              fontSize: "clamp(1rem, 2.2vw, 1.9rem)",
+              textShadow: "0 2px 16px rgba(0,0,0,0.8)",
+            }}>
             {legenda}
           </p>
         )}
@@ -295,25 +388,15 @@ interface ModoTVProps {
 }
 
 export default function ModoTV({ tvState }: ModoTVProps) {
-  const {
-    tipoSlide,
-    slideImagem,
-    indiceImagem,
-    totalImagens,
-    progresso,
-    sair,
-    avancar,
-  } = tvState;
+  const { tipoSlide, slideImagem, indiceImagem, totalImagens, progresso, sair, avancar } = tvState;
 
   const [fadeKey, setFadeKey] = useState(0);
   const [showControls, setShowControls] = useState(false);
 
-  // Força re-fade ao mudar de slide
   useEffect(() => {
-    setFadeKey((k) => k + 1);
+    setFadeKey(k => k + 1);
   }, [tipoSlide, indiceImagem]);
 
-  // Mostra controles brevemente ao mover o mouse
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
     const show = () => {
@@ -330,132 +413,65 @@ export default function ModoTV({ tvState }: ModoTVProps) {
     };
   }, []);
 
-  // Total de slides no ciclo: 1 dashboard + N imagens
   const totalSlides = 1 + totalImagens;
   const indiceGlobal = tipoSlide === "dashboard" ? 0 : indiceImagem + 1;
 
+  const barCor = tipoSlide === "dashboard"
+    ? "linear-gradient(90deg,#1d4ed8,#60a5fa)"
+    : "linear-gradient(90deg,#16a34a,#4ade80)";
+
   return (
-    <div
-      className="fixed inset-0 z-[9999] flex flex-col overflow-hidden"
-      style={{ background: "#0A0E1A" }}
-    >
-      {/* Conteúdo principal com fade */}
-      <div
-        key={fadeKey}
-        className="flex-1 relative"
-        style={{
-          animation: "tvFadeIn 0.6s ease-in-out",
-        }}
-      >
+    <div className="fixed inset-0 z-[9999] flex flex-col overflow-hidden" style={{ background: "#080C18" }}>
+
+      {/* Slide com fade */}
+      <div key={fadeKey} className="flex-1 relative" style={{ animation: "tvFadeIn 0.7s cubic-bezier(0.16,1,0.3,1)" }}>
         {tipoSlide === "dashboard" ? (
           <SlideDashboard />
         ) : slideImagem ? (
-          <SlideImagem
-            urlPublica={slideImagem.url_publica}
-            titulo={slideImagem.titulo}
-            legenda={slideImagem.legenda}
-          />
+          <SlideImagem urlPublica={slideImagem.url_publica} titulo={slideImagem.titulo} legenda={slideImagem.legenda} />
         ) : (
-          // Fallback se não houver imagens (não deveria acontecer)
           <SlideDashboard />
         )}
       </div>
 
       {/* Barra de progresso */}
-      <div
-        className="h-1 w-full"
-        style={{ background: "rgba(255,255,255,0.08)" }}
-      >
-        <div
-          className="h-full"
-          style={{
-            width: `${progresso}%`,
-            background:
-              tipoSlide === "dashboard"
-                ? "linear-gradient(90deg, #1d4ed8, #60a5fa)"
-                : "linear-gradient(90deg, #16a34a, #4ade80)",
-            transition: "width 0.2s linear",
-          }}
-        />
+      <div style={{ height: 3, background: "rgba(255,255,255,0.07)" }}>
+        <div style={{ height: "100%", width: `${progresso}%`, background: barCor, transition: "width 0.2s linear" }} />
       </div>
 
       {/* Rodapé com indicadores */}
-      <div
-        className="flex items-center justify-center gap-2 py-3"
-        style={{ background: "rgba(0,0,0,0.4)" }}
-      >
+      <div className="flex items-center justify-center gap-2 py-3" style={{ background: "rgba(0,0,0,0.5)" }}>
         {Array.from({ length: totalSlides }).map((_, i) => (
-          <div
-            key={i}
-            style={{
-              width: i === indiceGlobal ? 24 : 8,
-              height: 8,
-              borderRadius: 4,
-              background:
-                i === indiceGlobal
-                  ? "#60a5fa"
-                  : "rgba(255,255,255,0.25)",
-              transition: "all 0.3s ease",
-            }}
-          />
+          <div key={i} style={{
+            width: i === indiceGlobal ? 28 : 8,
+            height: 8,
+            borderRadius: 4,
+            background: i === indiceGlobal ? "#60a5fa" : "rgba(255,255,255,0.2)",
+            transition: "all 0.4s cubic-bezier(0.34,1.56,0.64,1)",
+          }} />
         ))}
       </div>
 
-      {/* Controles flutuantes (aparecem ao mover o mouse) */}
-      <div
-        className="absolute top-6 right-6 flex items-center gap-2 transition-opacity duration-300"
-        style={{ opacity: showControls ? 1 : 0, pointerEvents: showControls ? "auto" : "none" }}
-      >
-        {/* Avançar slide */}
-        <button
-          onClick={avancar}
-          title="Próximo slide"
-          className="flex items-center justify-center rounded-xl transition-colors"
-          style={{
-            background: "rgba(255,255,255,0.12)",
-            border: "1px solid rgba(255,255,255,0.15)",
-            color: "white",
-            width: 44,
-            height: 44,
-          }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.background = "rgba(255,255,255,0.22)")
-          }
-          onMouseLeave={(e) =>
-            (e.currentTarget.style.background = "rgba(255,255,255,0.12)")
-          }
-        >
+      {/* Controles flutuantes */}
+      <div className="absolute top-6 right-6 flex items-center gap-2 transition-opacity duration-300"
+        style={{ opacity: showControls ? 1 : 0, pointerEvents: showControls ? "auto" : "none" }}>
+        <button onClick={avancar} title="Próximo slide"
+          className="flex items-center justify-center rounded-xl"
+          style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", color: "white", width: 44, height: 44, cursor: "pointer" }}>
           <ChevronRight style={{ width: 20, height: 20 }} />
         </button>
-
-        {/* Fechar Modo TV */}
-        <button
-          onClick={sair}
-          title="Sair do Modo TV (ESC)"
-          className="flex items-center justify-center rounded-xl transition-colors"
-          style={{
-            background: "rgba(220,38,38,0.3)",
-            border: "1px solid rgba(220,38,38,0.5)",
-            color: "white",
-            width: 44,
-            height: 44,
-          }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.background = "rgba(220,38,38,0.6)")
-          }
-          onMouseLeave={(e) =>
-            (e.currentTarget.style.background = "rgba(220,38,38,0.3)")
-          }
-        >
+        <button onClick={sair} title="Sair do Modo TV (ESC)"
+          className="flex items-center justify-center rounded-xl"
+          style={{ background: "rgba(220,38,38,0.25)", border: "1px solid rgba(220,38,38,0.4)", color: "white", width: 44, height: 44, cursor: "pointer" }}>
           <X style={{ width: 20, height: 20 }} />
         </button>
       </div>
 
-      {/* Keyframes de fade */}
+      {/* Keyframes */}
       <style>{`
         @keyframes tvFadeIn {
-          from { opacity: 0; transform: scale(1.01); }
-          to   { opacity: 1; transform: scale(1);    }
+          from { opacity: 0; transform: scale(1.015); }
+          to   { opacity: 1; transform: scale(1); }
         }
       `}</style>
     </div>
