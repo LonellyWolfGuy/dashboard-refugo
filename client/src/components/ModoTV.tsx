@@ -12,7 +12,8 @@ import { useState, useEffect, useRef } from "react";
 import { useDashboard } from "@/contexts/DashboardContext";
 import { useTVMode } from "@/hooks/useTVMode";
 import { MESES_NOMES } from "@/lib/initialData";
-import { X, ChevronRight, TrendingDown, TrendingUp, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { X, ChevronRight, TrendingDown, TrendingUp, AlertTriangle, CheckCircle2, Cloud, Thermometer, Droplets } from "lucide-react";
+import { buscarClima, descricaoTempo, iconeTempo } from "@/services/weatherService";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -334,6 +335,166 @@ function SlideDashboard() {
   );
 }
 
+// ─── Sub-componente: Slide de Clima ───────────────────────────────────────────
+
+function SlideClima() {
+  const [dados, setDados] = useState<Awaited<ReturnType<typeof buscarClima>> | null>(null);
+  const [erro, setErro] = useState(false);
+  const [agora, setAgora] = useState(new Date());
+
+  useEffect(() => {
+    const t = setInterval(() => setAgora(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    buscarClima("Joinville")
+      .then(setDados)
+      .catch(() => setErro(true));
+    const t = setInterval(() => {
+      buscarClima("Joinville")
+        .then(setDados)
+        .catch(() => setErro(true));
+    }, 600_000);
+    return () => clearInterval(t);
+  }, []);
+
+  const hora = agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const data = agora.toLocaleDateString("pt-BR", {
+    weekday: "long", day: "2-digit", month: "long",
+  });
+  const dataObj = agora.toLocaleDateString("pt-BR", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+  });
+
+  function formatarDia(dataStr: string) {
+    const d = new Date(dataStr + "T12:00:00");
+    return d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" }).replace(".", "");
+  }
+
+  if (erro) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center" style={{ background: "linear-gradient(135deg, #0f172a, #1e293b)" }}>
+        <div className="text-center">
+          <Cloud style={{ width: 64, height: 64, color: "rgba(255,255,255,0.2)", margin: "0 auto 16px" }} />
+          <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(1rem, 1.5vw, 1.3rem)" }}>Indisponível</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-full overflow-hidden" style={{ background: "linear-gradient(135deg, #0c1445 0%, #1a237e 40%, #283593 100%)" }}>
+
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background: "radial-gradient(ellipse 80% 50% at 50% 100%, rgba(100,150,255,0.1), transparent)",
+      }} />
+
+      <div className="relative z-10 flex items-start justify-between px-10 pt-6">
+        <div>
+          <p className="uppercase tracking-widest font-bold"
+            style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.6rem, 0.85vw, 0.75rem)" }}>
+            Implatec — Clima
+          </p>
+          <h2 className="font-black text-white capitalize leading-none mt-1"
+            style={{ fontSize: "clamp(1.2rem, 2vw, 1.8rem)" }}>
+            {dados?.cidade ?? "Carregando..."}
+          </h2>
+        </div>
+        <div className="flex flex-col items-end">
+          <span className="font-mono font-black text-white tabular-nums leading-none"
+            style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)" }}>
+            {hora}
+          </span>
+          <p className="capitalize text-slate-400 font-medium"
+            style={{ fontSize: "clamp(0.55rem, 0.85vw, 0.75rem)" }}>
+            {data}
+          </p>
+        </div>
+      </div>
+
+      {dados && (
+        <div className="relative z-10 flex flex-1 items-center justify-center gap-16 px-10 pb-4">
+
+          <div className="flex flex-col items-center flex-shrink-0">
+            <span style={{ fontSize: "clamp(5rem, 10vw, 8rem)", lineHeight: 1 }}>
+              {iconeTempo(dados.codigo)}
+            </span>
+            <div className="flex items-start leading-none mt-2">
+              <span className="font-black font-mono tabular-nums text-white"
+                style={{ fontSize: "clamp(5rem, 11vw, 9rem)" }}>
+                {dados.temperatura}
+              </span>
+              <span className="font-black text-white/40"
+                style={{ fontSize: "clamp(2rem, 4vw, 3.5rem)", marginTop: "0.15em" }}>
+                °C
+              </span>
+            </div>
+            <p className="font-semibold text-center mt-1"
+              style={{ color: "rgba(255,255,255,0.6)", fontSize: "clamp(1rem, 1.8vw, 1.5rem)" }}>
+              {descricaoTempo(dados.codigo)}
+            </p>
+            <p className="font-medium"
+              style={{ color: "rgba(255,255,255,0.25)", fontSize: "clamp(0.6rem, 0.9vw, 0.8rem)" }}>
+              Atualizado agora
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <div className="rounded-2xl px-6 py-4"
+              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <p className="uppercase tracking-widest font-semibold"
+                style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.5rem, 0.7vw, 0.6rem)" }}>
+                Previsão para os próximos dias
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              {dados.previsao.map((dia, i) => (
+                <div key={dia.data} className="rounded-2xl px-6 py-5 text-center"
+                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <p className="font-bold capitalize"
+                    style={{ color: "rgba(255,255,255,0.5)", fontSize: "clamp(0.7rem, 1.1vw, 0.9rem)" }}>
+                    {i === 0 ? "Amanhã" : new Date(dia.data + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", "")}
+                  </p>
+                  <div style={{ fontSize: "clamp(2.5rem, 4vw, 3.5rem)", margin: "8px 0" }}>
+                    {iconeTempo(dia.codigo)}
+                  </div>
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="font-black font-mono tabular-nums text-white"
+                      style={{ fontSize: "clamp(1.5rem, 2.5vw, 2.2rem)" }}>
+                      {Math.round(dia.tempMax)}°
+                    </span>
+                    <span className="font-semibold font-mono tabular-nums"
+                      style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(1rem, 1.8vw, 1.5rem)" }}>
+                      {Math.round(dia.tempMin)}°
+                    </span>
+                  </div>
+                  <p className="font-medium mt-1"
+                    style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.55rem, 0.85vw, 0.7rem)" }}>
+                    {descricaoTempo(dia.codigo)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!dados && (
+        <div className="relative z-10 flex flex-1 items-center justify-center">
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
+            <span className="text-white/40 font-medium" style={{ fontSize: "clamp(1rem, 1.5vw, 1.3rem)" }}>
+              Carregando clima...
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Sub-componente: Slide de Imagem ──────────────────────────────────────────
 
 interface SlideImagemProps {
@@ -424,12 +585,13 @@ export default function ModoTV({ tvState }: ModoTVProps) {
     };
   }, []);
 
-  const totalSlides = 1 + totalImagens;
-  const indiceGlobal = tipoSlide === "dashboard" ? 0 : indiceImagem + 1;
+  const totalSlides = 2 + totalImagens;
+  const indiceGlobal = tipoSlide === "dashboard" ? 0 : tipoSlide === "clima" ? 1 : indiceImagem + 2;
 
-  const barCor = tipoSlide === "dashboard"
-    ? "linear-gradient(90deg,#1d4ed8,#60a5fa)"
-    : "linear-gradient(90deg,#16a34a,#4ade80)";
+  const barCor =
+    tipoSlide === "dashboard" ? "linear-gradient(90deg,#1d4ed8,#60a5fa)" :
+    tipoSlide === "clima" ? "linear-gradient(90deg,#7c3aed,#a78bfa)" :
+    "linear-gradient(90deg,#16a34a,#4ade80)";
 
   return (
     <div className="fixed inset-0 z-[9999] flex flex-col overflow-hidden" style={{ background: "#080C18" }}>
@@ -438,6 +600,8 @@ export default function ModoTV({ tvState }: ModoTVProps) {
       <div key={fadeKey} className="flex-1 relative" style={{ animation: "tvFadeIn 0.7s cubic-bezier(0.16,1,0.3,1)" }}>
         {tipoSlide === "dashboard" ? (
           <SlideDashboard />
+        ) : tipoSlide === "clima" ? (
+          <SlideClima />
         ) : slideImagem ? (
           <SlideImagem urlPublica={slideImagem.url_publica} titulo={slideImagem.titulo} legenda={slideImagem.legenda} />
         ) : (
