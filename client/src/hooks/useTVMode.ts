@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { listarSlides, MuralSlide } from "@/services/muralService";
+import { buscarClima, DadosClima } from "@/services/weatherService";
 
 export type TipoSlide = "dashboard" | "clima" | "imagem";
 
@@ -10,6 +11,7 @@ export interface TVModeState {
   indiceImagem: number;
   totalImagens: number;
   progresso: number;
+  dadosClima: DadosClima | null;
   entrar: () => Promise<void>;
   sair: () => void;
   avancar: () => void;
@@ -19,7 +21,7 @@ const TV_SEG_DASHBOARD_KEY = "tv_seg_dashboard";
 const TV_SEG_IMAGEM_KEY    = "tv_seg_imagem";
 const DEFAULT_SEG_DASHBOARD = 30;
 const DEFAULT_SEG_IMAGEM    = 15;
-const SEG_CLIMA = 15;
+const SEG_CLIMA = 20;
 
 function getConfig() {
   const d = parseInt(localStorage.getItem(TV_SEG_DASHBOARD_KEY) ?? "", 10);
@@ -36,6 +38,7 @@ export function useTVMode(): TVModeState {
   const [indiceImagem,  setIndiceImagem]  = useState(0);
   const [progresso,     setProgresso]     = useState(0);
   const [imagens,       setImagens]       = useState<MuralSlide[]>([]);
+  const [dadosClima,    setDadosClima]    = useState<DadosClima | null>(null);
 
   const intervalRef      = useRef<ReturnType<typeof setInterval> | null>(null);
   const progressoRef     = useRef(0);
@@ -122,6 +125,10 @@ export function useTVMode(): TVModeState {
       console.error("[useTVMode] Erro ao carregar slides:", err);
     }
 
+    buscarClima("Joinville")
+      .then(setDadosClima)
+      .catch(() => {});
+
     tipoAtualRef.current  = "dashboard";
     indiceImagemRef.current = 0;
     setTipoSlide("dashboard");
@@ -146,6 +153,7 @@ export function useTVMode(): TVModeState {
     setProgresso(0);
     progressoRef.current = 0;
     tipoAtualRef.current = "dashboard";
+    setDadosClima(null);
 
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(() => {});
@@ -199,6 +207,7 @@ export function useTVMode(): TVModeState {
     indiceImagem,
     totalImagens: imagens.length,
     progresso,
+    dadosClima,
     entrar,
     sair,
     avancar: avancarSlide,

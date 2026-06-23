@@ -1,4 +1,4 @@
-// ModoTV.tsx — V2 redesign
+// ModoTV.tsx — V3 redesign
 // Design premium para TV industrial:
 // • % Refugo como HERO metric (enorme, cor dinâmica)
 // • Barra de progresso circular animada vs meta
@@ -13,7 +13,7 @@ import { useDashboard } from "@/contexts/DashboardContext";
 import { useTVMode } from "@/hooks/useTVMode";
 import { MESES_NOMES } from "@/lib/initialData";
 import { X, ChevronRight, TrendingDown, TrendingUp, AlertTriangle, CheckCircle2, Cloud, Thermometer, Droplets } from "lucide-react";
-import { buscarClima, descricaoTempo, iconeTempo } from "@/services/weatherService";
+import { buscarClima, descricaoTempo, iconeTempo, DadosClima } from "@/services/weatherService";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -34,7 +34,6 @@ function useCountUp(target: number, duration = 1200): number {
       if (!start) start = ts;
       const elapsed = ts - start;
       const progress = Math.min(elapsed / duration, 1);
-      // Ease out cubic
       const ease = 1 - Math.pow(1 - progress, 3);
       setValue(initial + (target - initial) * ease);
       if (progress < 1) rafRef.current = requestAnimationFrame(step);
@@ -50,17 +49,16 @@ function useCountUp(target: number, duration = 1200): number {
 // ─── Arco SVG de progresso circular ──────────────────────────────────────────
 
 interface ArcProgressProps {
-  percent: number;   // valor atual (0–100)
-  meta: number;      // meta (0–100)
-  cor: string;       // cor do arco preenchido
-  corMeta: string;   // cor da marca de meta
+  percent: number;
+  meta: number;
+  cor: string;
+  corMeta: string;
   size?: number;
 }
 
 function ArcProgress({ percent, meta, cor, corMeta, size = 280 }: ArcProgressProps) {
   const radius = (size - 24) / 2;
   const circum = 2 * Math.PI * radius;
-  // Arco de 240° (de -210° a 30°, partindo do centro inferior)
   const arcFrac = 240 / 360;
   const arcLength = circum * arcFrac;
 
@@ -69,14 +67,12 @@ function ArcProgress({ percent, meta, cor, corMeta, size = 280 }: ArcProgressPro
 
   const cx = size / 2;
   const cy = size / 2;
-  const startAngle = -210; // graus
+  const startAngle = -210;
 
-  // Transforma ângulo em offsets no círculo
   const rotate = `rotate(${startAngle}, ${cx}, ${cy})`;
 
   return (
     <svg width={size} height={size} style={{ overflow: "visible" }}>
-      {/* Trilha de fundo */}
       <circle
         cx={cx} cy={cy} r={radius}
         fill="none"
@@ -87,7 +83,6 @@ function ArcProgress({ percent, meta, cor, corMeta, size = 280 }: ArcProgressPro
         transform={rotate}
         style={{ transition: "stroke-dashoffset 0.6s ease" }}
       />
-      {/* Arco preenchido */}
       <circle
         cx={cx} cy={cy} r={radius}
         fill="none"
@@ -98,7 +93,6 @@ function ArcProgress({ percent, meta, cor, corMeta, size = 280 }: ArcProgressPro
         transform={rotate}
         style={{ transition: "stroke-dasharray 1.2s cubic-bezier(0.34,1.56,0.64,1), stroke 0.6s ease" }}
       />
-      {/* Marca de meta */}
       <circle
         cx={cx} cy={cy} r={radius}
         fill="none"
@@ -132,16 +126,16 @@ function RelogioTV() {
     <div className="flex flex-col items-end">
       <div className="flex items-end gap-1 leading-none">
         <span className="font-mono font-black text-white tabular-nums"
-          style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)" }}>
+          style={{ fontSize: "clamp(3.5rem, 6vw, 5rem)" }}>
           {hora}
         </span>
         <span className="font-mono font-bold text-slate-400 tabular-nums mb-1"
-          style={{ fontSize: "clamp(1.2rem, 2.5vw, 2rem)" }}>
+          style={{ fontSize: "clamp(1.6rem, 3vw, 2.5rem)" }}>
           :{seg}
         </span>
       </div>
       <p className="capitalize text-slate-400 font-medium"
-        style={{ fontSize: "clamp(0.7rem, 1.1vw, 0.9rem)" }}>
+        style={{ fontSize: "clamp(1rem, 1.5vw, 1.3rem)" }}>
         {data}
       </p>
     </div>
@@ -161,10 +155,10 @@ function Metrica({ label, valor, cor }: MetricaProps) {
     <div className="flex flex-col gap-1 px-6 py-4 rounded-2xl"
       style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
       <span className="uppercase tracking-widest font-semibold"
-        style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.55rem, 0.9vw, 0.75rem)" }}>
+        style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.8rem, 1.2vw, 1rem)" }}>
         {label}
       </span>
-      <span className="font-black font-mono tabular-nums" style={{ color: cor, fontSize: "clamp(1.6rem, 3.5vw, 2.8rem)", lineHeight: 1 }}>
+      <span className="font-black font-mono tabular-nums" style={{ color: cor, fontSize: "clamp(2.2rem, 4.5vw, 3.5rem)", lineHeight: 1 }}>
         {valor}
       </span>
     </div>
@@ -217,11 +211,11 @@ function SlideDashboard() {
       <div className="relative z-10 flex items-start justify-between px-10 pt-6">
         <div>
           <p className="uppercase tracking-widest font-bold"
-            style={{ color: "rgba(255,255,255,0.35)", fontSize: "clamp(0.65rem, 0.9vw, 0.8rem)" }}>
+            style={{ color: "rgba(255,255,255,0.35)", fontSize: "clamp(0.85rem, 1.2vw, 1.1rem)" }}>
             Implatec — Controle de Refugo
           </p>
           <h1 className="font-black text-white capitalize leading-none mt-1"
-            style={{ fontSize: "clamp(1.4rem, 2.2vw, 2rem)" }}>
+            style={{ fontSize: "clamp(2rem, 3vw, 2.8rem)" }}>
             {MESES_NOMES[mesAtual - 1]} <span style={{ color: "rgba(255,255,255,0.2)" }}>{anoAtual}</span>
           </h1>
         </div>
@@ -232,13 +226,13 @@ function SlideDashboard() {
 
         <div className="flex flex-col items-center gap-3 flex-shrink-0">
           <span className="uppercase tracking-widest font-semibold"
-            style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.6rem, 0.85vw, 0.75rem)" }}>
+            style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.85rem, 1.2vw, 1rem)" }}>
             % Refugo — {MESES_NOMES[mesAtual - 1]}
           </span>
           <span className="font-black font-mono tabular-nums leading-none"
             style={{
               color: p.hero,
-              fontSize: "clamp(5rem, 12vw, 10rem)",
+              fontSize: "clamp(6rem, 15vw, 12rem)",
               textShadow: `0 0 50px ${p.hero}33`,
               lineHeight: 1,
             }}>
@@ -248,12 +242,12 @@ function SlideDashboard() {
             style={{ background: "rgba(0,0,0,0.5)", border: `1px solid ${p.hero}33` }}>
             <StatusIcon style={{ width: 16, height: 16, color: p.hero }} />
             <span className="font-bold tracking-wider"
-              style={{ color: p.hero, fontSize: "clamp(0.65rem, 1vw, 0.85rem)" }}>
+              style={{ color: p.hero, fontSize: "clamp(0.9rem, 1.3vw, 1.1rem)" }}>
               {p.label}
             </span>
           </div>
           <p className="font-semibold"
-            style={{ color: "rgba(255,255,255,0.25)", fontSize: "clamp(0.55rem, 0.85vw, 0.75rem)" }}>
+            style={{ color: "rgba(255,255,255,0.25)", fontSize: "clamp(0.75rem, 1.1vw, 0.95rem)" }}>
             Meta: até {metaRefugo}% &nbsp;|&nbsp; {diasRegistrados} dia{diasRegistrados !== 1 ? "s" : ""}
           </p>
         </div>
@@ -262,11 +256,11 @@ function SlideDashboard() {
           <div className="rounded-2xl px-8 py-5"
             style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
             <p className="uppercase tracking-widest font-semibold"
-              style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.5rem, 0.75vw, 0.65rem)" }}>
+              style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.75rem, 1.1vw, 0.9rem)" }}>
               Produção Total
             </p>
             <p className="font-black font-mono tabular-nums text-white leading-none mt-1"
-              style={{ fontSize: "clamp(2.2rem, 4.5vw, 3.5rem)" }}>
+              style={{ fontSize: "clamp(2.8rem, 5.5vw, 4.5rem)" }}>
               {temDados ? formatNum(producaoAnimada) : "—"}
             </p>
           </div>
@@ -274,11 +268,11 @@ function SlideDashboard() {
           <div className="rounded-2xl px-8 py-5"
             style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
             <p className="uppercase tracking-widest font-semibold"
-              style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.5rem, 0.75vw, 0.65rem)" }}>
+              style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.75rem, 1.1vw, 0.9rem)" }}>
               Total Refugo
             </p>
             <p className="font-black font-mono tabular-nums leading-none mt-1"
-              style={{ color: temDados ? "#f87171" : "rgba(255,255,255,0.3)", fontSize: "clamp(2.2rem, 4.5vw, 3.5rem)" }}>
+              style={{ color: temDados ? "#f87171" : "rgba(255,255,255,0.3)", fontSize: "clamp(2.8rem, 5.5vw, 4.5rem)" }}>
               {temDados ? formatNum(refugoAnimado) : "—"}
             </p>
           </div>
@@ -289,24 +283,24 @@ function SlideDashboard() {
               <div className="flex items-center justify-between">
                 <div className="text-center flex-1">
                   <p className="uppercase tracking-widest font-semibold"
-                    style={{ color: "rgba(255,255,255,0.25)", fontSize: "clamp(0.45rem, 0.65vw, 0.55rem)" }}>
+                    style={{ color: "rgba(255,255,255,0.25)", fontSize: "clamp(0.6rem, 0.9vw, 0.75rem)" }}>
                     {MESES_NOMES[mesPrevio! - 1]}
                   </p>
                   <p className="font-bold font-mono tabular-nums leading-none mt-1"
-                    style={{ color: "rgba(255,255,255,0.6)", fontSize: "clamp(1.5rem, 3vw, 2.5rem)" }}>
+                    style={{ color: "rgba(255,255,255,0.6)", fontSize: "clamp(2rem, 3.5vw, 3rem)" }}>
                     {pctPrevio.toFixed(1)}%
                   </p>
                 </div>
-                <div style={{ color: "rgba(255,255,255,0.15)", fontSize: "clamp(1.2rem, 2.5vw, 2rem)", padding: "0 12px" }}>
+                <div style={{ color: "rgba(255,255,255,0.15)", fontSize: "clamp(1.6rem, 3vw, 2.5rem)", padding: "0 12px" }}>
                   →
                 </div>
                 <div className="text-center flex-1">
                   <p className="uppercase tracking-widest font-semibold"
-                    style={{ color: "rgba(255,255,255,0.25)", fontSize: "clamp(0.45rem, 0.65vw, 0.55rem)" }}>
+                    style={{ color: "rgba(255,255,255,0.25)", fontSize: "clamp(0.6rem, 0.9vw, 0.75rem)" }}>
                     {MESES_NOMES[mesAtual - 1]}
                   </p>
                   <p className="font-bold font-mono tabular-nums leading-none mt-1"
-                    style={{ color: p.hero, fontSize: "clamp(1.5rem, 3vw, 2.5rem)" }}>
+                    style={{ color: p.hero, fontSize: "clamp(2rem, 3.5vw, 3rem)" }}>
                     {pct.toFixed(1)}%
                   </p>
                 </div>
@@ -316,7 +310,7 @@ function SlideDashboard() {
                   <span className="font-semibold"
                     style={{
                       color: diff <= 0 ? "#22c55e" : "#ef4444",
-                      fontSize: "clamp(0.6rem, 0.9vw, 0.75rem)",
+                      fontSize: "clamp(0.8rem, 1.2vw, 1rem)",
                     }}>
                     {diff <= 0 ? "↓ Melhorou" : "↑ Piorou"} {Math.abs(diff).toFixed(1)}% em relação ao mês anterior
                   </span>
@@ -337,10 +331,18 @@ function SlideDashboard() {
 
 // ─── Sub-componente: Slide de Clima ───────────────────────────────────────────
 
-function SlideClima() {
-  const [dados, setDados] = useState<Awaited<ReturnType<typeof buscarClima>> | null>(null);
+interface SlideClimaProps {
+  dadosClima: DadosClima | null;
+}
+
+function SlideClima({ dadosClima }: SlideClimaProps) {
+  const [dados, setDados] = useState<DadosClima | null>(dadosClima);
   const [erro, setErro] = useState(false);
   const [agora, setAgora] = useState(new Date());
+
+  useEffect(() => {
+    if (dadosClima) setDados(dadosClima);
+  }, [dadosClima]);
 
   useEffect(() => {
     const t = setInterval(() => setAgora(new Date()), 1000);
@@ -348,23 +350,23 @@ function SlideClima() {
   }, []);
 
   useEffect(() => {
-    buscarClima("Joinville")
-      .then(setDados)
-      .catch(() => setErro(true));
+    if (!dados) {
+      buscarClima("Joinville")
+        .then(setDados)
+        .catch(() => setErro(true));
+    }
     const t = setInterval(() => {
       buscarClima("Joinville")
         .then(setDados)
         .catch(() => setErro(true));
     }, 600_000);
     return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const hora = agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   const data = agora.toLocaleDateString("pt-BR", {
     weekday: "long", day: "2-digit", month: "long",
-  });
-  const dataObj = agora.toLocaleDateString("pt-BR", {
-    day: "2-digit", month: "2-digit", year: "numeric",
   });
 
   function formatarDia(dataStr: string) {
@@ -377,7 +379,7 @@ function SlideClima() {
       <div className="flex flex-col h-full items-center justify-center" style={{ background: "linear-gradient(135deg, #0f172a, #1e293b)" }}>
         <div className="text-center">
           <Cloud style={{ width: 64, height: 64, color: "rgba(255,255,255,0.2)", margin: "0 auto 16px" }} />
-          <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(1rem, 1.5vw, 1.3rem)" }}>Indisponível</p>
+          <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(1.5rem, 2.5vw, 2rem)" }}>Indisponível</p>
         </div>
       </div>
     );
@@ -393,21 +395,21 @@ function SlideClima() {
       <div className="relative z-10 flex items-start justify-between px-10 pt-6">
         <div>
           <p className="uppercase tracking-widest font-bold"
-            style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.6rem, 0.85vw, 0.75rem)" }}>
+            style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.85rem, 1.2vw, 1.1rem)" }}>
             Implatec — Clima
           </p>
           <h2 className="font-black text-white capitalize leading-none mt-1"
-            style={{ fontSize: "clamp(1.2rem, 2vw, 1.8rem)" }}>
+            style={{ fontSize: "clamp(1.8rem, 3vw, 2.8rem)" }}>
             {dados?.cidade ?? "Carregando..."}
           </h2>
         </div>
         <div className="flex flex-col items-end">
           <span className="font-mono font-black text-white tabular-nums leading-none"
-            style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)" }}>
+            style={{ fontSize: "clamp(3.5rem, 6vw, 5rem)" }}>
             {hora}
           </span>
           <p className="capitalize text-slate-400 font-medium"
-            style={{ fontSize: "clamp(0.55rem, 0.85vw, 0.75rem)" }}>
+            style={{ fontSize: "clamp(0.8rem, 1.3vw, 1.1rem)" }}>
             {data}
           </p>
         </div>
@@ -417,25 +419,25 @@ function SlideClima() {
         <div className="relative z-10 flex flex-1 items-center justify-center gap-16 px-10 pb-4">
 
           <div className="flex flex-col items-center flex-shrink-0">
-            <span style={{ fontSize: "clamp(5rem, 10vw, 8rem)", lineHeight: 1 }}>
+            <span style={{ fontSize: "clamp(6rem, 12vw, 10rem)", lineHeight: 1 }}>
               {iconeTempo(dados.codigo)}
             </span>
             <div className="flex items-start leading-none mt-2">
               <span className="font-black font-mono tabular-nums text-white"
-                style={{ fontSize: "clamp(5rem, 11vw, 9rem)" }}>
+                style={{ fontSize: "clamp(6rem, 14vw, 11rem)" }}>
                 {dados.temperatura}
               </span>
               <span className="font-black text-white/40"
-                style={{ fontSize: "clamp(2rem, 4vw, 3.5rem)", marginTop: "0.15em" }}>
+                style={{ fontSize: "clamp(2.5rem, 5vw, 4.5rem)", marginTop: "0.15em" }}>
                 °C
               </span>
             </div>
             <p className="font-semibold text-center mt-1"
-              style={{ color: "rgba(255,255,255,0.6)", fontSize: "clamp(1rem, 1.8vw, 1.5rem)" }}>
+              style={{ color: "rgba(255,255,255,0.6)", fontSize: "clamp(1.4rem, 2.5vw, 2rem)" }}>
               {descricaoTempo(dados.codigo)}
             </p>
             <p className="font-medium"
-              style={{ color: "rgba(255,255,255,0.25)", fontSize: "clamp(0.6rem, 0.9vw, 0.8rem)" }}>
+              style={{ color: "rgba(255,255,255,0.25)", fontSize: "clamp(0.8rem, 1.3vw, 1rem)" }}>
               Atualizado agora
             </p>
           </div>
@@ -444,7 +446,7 @@ function SlideClima() {
             <div className="rounded-2xl px-6 py-4"
               style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
               <p className="uppercase tracking-widest font-semibold"
-                style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.5rem, 0.7vw, 0.6rem)" }}>
+                style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.75rem, 1.1vw, 0.9rem)" }}>
                 Previsão para os próximos dias
               </p>
             </div>
@@ -454,24 +456,24 @@ function SlideClima() {
                 <div key={dia.data} className="rounded-2xl px-6 py-5 text-center"
                   style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
                   <p className="font-bold capitalize"
-                    style={{ color: "rgba(255,255,255,0.5)", fontSize: "clamp(0.7rem, 1.1vw, 0.9rem)" }}>
+                    style={{ color: "rgba(255,255,255,0.5)", fontSize: "clamp(1rem, 1.5vw, 1.3rem)" }}>
                     {i === 0 ? "Amanhã" : new Date(dia.data + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", "")}
                   </p>
-                  <div style={{ fontSize: "clamp(2.5rem, 4vw, 3.5rem)", margin: "8px 0" }}>
+                  <div style={{ fontSize: "clamp(3rem, 5vw, 4.5rem)", margin: "8px 0" }}>
                     {iconeTempo(dia.codigo)}
                   </div>
                   <div className="flex items-center justify-center gap-2">
                     <span className="font-black font-mono tabular-nums text-white"
-                      style={{ fontSize: "clamp(1.5rem, 2.5vw, 2.2rem)" }}>
+                      style={{ fontSize: "clamp(2.2rem, 3.5vw, 3rem)" }}>
                       {Math.round(dia.tempMax)}°
                     </span>
                     <span className="font-semibold font-mono tabular-nums"
-                      style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(1rem, 1.8vw, 1.5rem)" }}>
+                      style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(1.4rem, 2.5vw, 2rem)" }}>
                       {Math.round(dia.tempMin)}°
                     </span>
                   </div>
                   <p className="font-medium mt-1"
-                    style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.55rem, 0.85vw, 0.7rem)" }}>
+                    style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.8rem, 1.2vw, 1rem)" }}>
                     {descricaoTempo(dia.codigo)}
                   </p>
                 </div>
@@ -485,7 +487,7 @@ function SlideClima() {
         <div className="relative z-10 flex flex-1 items-center justify-center">
           <div className="flex items-center gap-3">
             <div className="w-6 h-6 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
-            <span className="text-white/40 font-medium" style={{ fontSize: "clamp(1rem, 1.5vw, 1.3rem)" }}>
+            <span className="text-white/40 font-medium" style={{ fontSize: "clamp(1.5rem, 2.5vw, 2rem)" }}>
               Carregando clima...
             </span>
           </div>
@@ -513,22 +515,18 @@ function SlideImagem({ urlPublica, titulo, legenda }: SlideImagemProps) {
         style={{ objectFit: "cover", opacity: 0.88 }}
       />
 
-      {/* Gradientes */}
       <div className="absolute inset-0" style={{
         background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.2) 45%, rgba(0,0,0,0.35) 100%)"
       }} />
 
-      {/* Marca no topo */}
       <div className="absolute top-8 left-10">
         <p className="uppercase font-bold tracking-[0.3em]"
-          style={{ color: "rgba(255,255,255,0.5)", fontSize: "clamp(0.6rem, 0.9vw, 0.8rem)" }}>
+          style={{ color: "rgba(255,255,255,0.5)", fontSize: "clamp(0.85rem, 1.2vw, 1.1rem)" }}>
           Implatec Perfis Plásticos
         </p>
       </div>
 
-      {/* Texto na base */}
       <div className="absolute bottom-0 left-0 right-0 px-14 pb-14">
-        {/* Linha decorativa */}
         <div className="mb-5" style={{ width: 60, height: 4, borderRadius: 2, background: "white", opacity: 0.6 }} />
         <h2 className="font-black text-white"
           style={{
@@ -542,7 +540,7 @@ function SlideImagem({ urlPublica, titulo, legenda }: SlideImagemProps) {
         {legenda && (
           <p className="mt-4 font-semibold text-white/70"
             style={{
-              fontSize: "clamp(1rem, 2.2vw, 1.9rem)",
+              fontSize: "clamp(1.2rem, 2.5vw, 2.2rem)",
               textShadow: "0 2px 16px rgba(0,0,0,0.8)",
             }}>
             {legenda}
@@ -560,7 +558,7 @@ interface ModoTVProps {
 }
 
 export default function ModoTV({ tvState }: ModoTVProps) {
-  const { tipoSlide, slideImagem, indiceImagem, totalImagens, progresso, sair, avancar } = tvState;
+  const { tipoSlide, slideImagem, indiceImagem, totalImagens, progresso, dadosClima, sair, avancar } = tvState;
 
   const [fadeKey, setFadeKey] = useState(0);
   const [showControls, setShowControls] = useState(false);
@@ -596,12 +594,11 @@ export default function ModoTV({ tvState }: ModoTVProps) {
   return (
     <div className="fixed inset-0 z-[9999] flex flex-col overflow-hidden" style={{ background: "#080C18" }}>
 
-      {/* Slide com fade */}
       <div key={fadeKey} className="flex-1 relative" style={{ animation: "tvFadeIn 0.7s cubic-bezier(0.16,1,0.3,1)" }}>
         {tipoSlide === "dashboard" ? (
           <SlideDashboard />
         ) : tipoSlide === "clima" ? (
-          <SlideClima />
+          <SlideClima dadosClima={dadosClima} />
         ) : slideImagem ? (
           <SlideImagem urlPublica={slideImagem.url_publica} titulo={slideImagem.titulo} legenda={slideImagem.legenda} />
         ) : (
@@ -609,12 +606,10 @@ export default function ModoTV({ tvState }: ModoTVProps) {
         )}
       </div>
 
-      {/* Barra de progresso */}
       <div style={{ height: 3, background: "rgba(255,255,255,0.07)" }}>
         <div style={{ height: "100%", width: `${progresso}%`, background: barCor, transition: "width 0.2s linear" }} />
       </div>
 
-      {/* Rodapé com indicadores */}
       <div className="flex items-center justify-center gap-2 py-3" style={{ background: "rgba(0,0,0,0.5)" }}>
         {Array.from({ length: totalSlides }).map((_, i) => (
           <div key={i} style={{
@@ -627,7 +622,6 @@ export default function ModoTV({ tvState }: ModoTVProps) {
         ))}
       </div>
 
-      {/* Controles flutuantes */}
       <div className="absolute top-6 right-6 flex items-center gap-2 transition-opacity duration-300"
         style={{ opacity: showControls ? 1 : 0, pointerEvents: showControls ? "auto" : "none" }}>
         <button onClick={avancar} title="Próximo slide"
@@ -642,7 +636,6 @@ export default function ModoTV({ tvState }: ModoTVProps) {
         </button>
       </div>
 
-      {/* Keyframes */}
       <style>{`
         @keyframes tvFadeIn {
           from { opacity: 0; transform: scale(1.015); }
