@@ -177,6 +177,9 @@ function SlideDashboard() {
   const totais = getTotaisMes(mesAtual);
   const diasRegistrados = meses.find(m => m.mes === mesAtual)?.registros.length ?? 0;
 
+  const mesPrevio = mesAtual > 1 ? mesAtual - 1 : null;
+  const totaisPrevios = mesPrevio ? getTotaisMes(mesPrevio) : null;
+
   const pct = totais.percentRefugo;
   const temDados = pct > 0;
   const status: "ok" | "atencao" | "critico" | "vazio" =
@@ -184,13 +187,13 @@ function SlideDashboard() {
     pct <= metaRefugo * 0.8 ? "ok" :
     pct <= metaRefugo ? "atencao" : "critico";
 
-  const palette = {
-    ok:      { hero: "#22c55e", bg: "#064e3b", faixa: "bg-emerald-500" },
-    atencao: { hero: "#f59e0b", bg: "#451a03", faixa: "bg-amber-500" },
-    critico: { hero: "#ef4444", bg: "#450a0a", faixa: "bg-red-500" },
-    vazio:   { hero: "#64748b", bg: "#0f172a", faixa: "bg-slate-500" },
+  const paleta = {
+    ok:      { hero: "#22c55e", faixa: "#22c55e", label: "DENTRO DA META" },
+    atencao: { hero: "#f59e0b", faixa: "#f59e0b", label: "ATENÇÃO — PRÓXIMO DA META" },
+    critico: { hero: "#ef4444", faixa: "#ef4444", label: "ACIMA DA META!" },
+    vazio:   { hero: "#64748b", faixa: "#475569", label: "SEM DADOS" },
   };
-  const p = palette[status];
+  const p = paleta[status];
 
   const pctAnimado = useCountUp(pct, 1400);
   const producaoAnimada = useCountUp(totais.totalProducao, 1200);
@@ -198,91 +201,135 @@ function SlideDashboard() {
 
   const StatusIcon = status === "ok" ? CheckCircle2 : AlertTriangle;
 
-  const statusLabel =
-    status === "ok" ? "DENTRO DA META" :
-    status === "atencao" ? "ATENÇÃO — PRÓXIMO DA META" :
-    status === "critico" ? "ACIMA DA META!" : "SEM DADOS";
+  const pctPrevio = totaisPrevios?.percentRefugo ?? 0;
+  const temPrevio = totaisPrevios !== null && totaisPrevios.total > 0;
+  const diff = temDados && temPrevio ? pct - pctPrevio : null;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden" style={{ background: p.bg }}>
+    <div className="flex flex-col h-full overflow-hidden" style={{ background: "#0f1117" }}>
+
+      <div className="absolute inset-0 pointer-events-none opacity-40"
+        style={{
+          background: `radial-gradient(ellipse 60% 40% at 50% 100%, ${p.hero}22, transparent)`,
+        }} />
 
       <div className="relative z-10 flex items-start justify-between px-10 pt-6">
         <div>
           <p className="uppercase tracking-widest font-bold"
-            style={{ color: "rgba(255,255,255,0.35)", fontSize: "clamp(0.7rem, 1vw, 0.9rem)" }}>
+            style={{ color: "rgba(255,255,255,0.35)", fontSize: "clamp(0.65rem, 0.9vw, 0.8rem)" }}>
             Implatec — Controle de Refugo
           </p>
           <h1 className="font-black text-white capitalize leading-none mt-1"
-            style={{ fontSize: "clamp(1.5rem, 2.5vw, 2.2rem)" }}>
+            style={{ fontSize: "clamp(1.4rem, 2.2vw, 2rem)" }}>
             {MESES_NOMES[mesAtual - 1]} <span style={{ color: "rgba(255,255,255,0.2)" }}>{anoAtual}</span>
           </h1>
         </div>
         <RelogioTV />
       </div>
 
-      <div className="relative z-10 flex flex-1 items-center justify-center gap-16 px-10 pb-4">
+      <div className="relative z-10 flex flex-1 items-center justify-center gap-12 px-10 pb-4">
 
-        <div className="flex flex-col items-center gap-2 flex-shrink-0">
+        <div className="flex flex-col items-center gap-3 flex-shrink-0">
           <span className="uppercase tracking-widest font-semibold"
-            style={{ color: "rgba(255,255,255,0.35)", fontSize: "clamp(0.65rem, 1vw, 0.85rem)" }}>
-            % Refugo
+            style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.6rem, 0.85vw, 0.75rem)" }}>
+            % Refugo — {MESES_NOMES[mesAtual - 1]}
           </span>
           <span className="font-black font-mono tabular-nums leading-none"
             style={{
               color: p.hero,
               fontSize: "clamp(5rem, 12vw, 10rem)",
-              textShadow: `0 0 60px ${p.hero}44`,
+              textShadow: `0 0 50px ${p.hero}33`,
               lineHeight: 1,
             }}>
             {temDados ? `${pctAnimado.toFixed(1)}%` : "—"}
           </span>
-          <div className="flex items-center gap-2 px-5 py-2 rounded-full"
-            style={{ background: "rgba(0,0,0,0.4)", border: `1px solid ${p.hero}44` }}>
-            <StatusIcon style={{ width: 18, height: 18, color: p.hero }} />
+          <div className="flex items-center gap-2 px-5 py-2 rounded-lg"
+            style={{ background: "rgba(0,0,0,0.5)", border: `1px solid ${p.hero}33` }}>
+            <StatusIcon style={{ width: 16, height: 16, color: p.hero }} />
             <span className="font-bold tracking-wider"
-              style={{ color: p.hero, fontSize: "clamp(0.7rem, 1.1vw, 0.9rem)" }}>
-              {statusLabel}
+              style={{ color: p.hero, fontSize: "clamp(0.65rem, 1vw, 0.85rem)" }}>
+              {p.label}
             </span>
           </div>
           <p className="font-semibold"
-            style={{ color: "rgba(255,255,255,0.25)", fontSize: "clamp(0.65rem, 1vw, 0.85rem)" }}>
+            style={{ color: "rgba(255,255,255,0.25)", fontSize: "clamp(0.55rem, 0.85vw, 0.75rem)" }}>
             Meta: até {metaRefugo}% &nbsp;|&nbsp; {diasRegistrados} dia{diasRegistrados !== 1 ? "s" : ""}
           </p>
         </div>
 
-        <div className="flex flex-col gap-4">
-          <div className="rounded-3xl px-10 py-6"
-            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
+        <div className="flex flex-col gap-4" style={{ minWidth: 280 }}>
+          <div className="rounded-2xl px-8 py-5"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
             <p className="uppercase tracking-widest font-semibold"
-              style={{ color: "rgba(255,255,255,0.35)", fontSize: "clamp(0.55rem, 0.85vw, 0.75rem)" }}>
+              style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.5rem, 0.75vw, 0.65rem)" }}>
               Produção Total
             </p>
             <p className="font-black font-mono tabular-nums text-white leading-none mt-1"
-              style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)" }}>
+              style={{ fontSize: "clamp(2.2rem, 4.5vw, 3.5rem)" }}>
               {temDados ? formatNum(producaoAnimada) : "—"}
             </p>
           </div>
 
-          <div className="rounded-3xl px-10 py-6"
-            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
+          <div className="rounded-2xl px-8 py-5"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
             <p className="uppercase tracking-widest font-semibold"
-              style={{ color: "rgba(255,255,255,0.35)", fontSize: "clamp(0.55rem, 0.85vw, 0.75rem)" }}>
+              style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.5rem, 0.75vw, 0.65rem)" }}>
               Total Refugo
             </p>
             <p className="font-black font-mono tabular-nums leading-none mt-1"
-              style={{ color: temDados ? "#f87171" : "rgba(255,255,255,0.3)", fontSize: "clamp(2.5rem, 5vw, 4rem)" }}>
+              style={{ color: temDados ? "#f87171" : "rgba(255,255,255,0.3)", fontSize: "clamp(2.2rem, 4.5vw, 3.5rem)" }}>
               {temDados ? formatNum(refugoAnimado) : "—"}
             </p>
           </div>
+
+          {temPrevio && (
+            <div className="rounded-2xl px-8 py-4"
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <div className="flex items-center justify-between">
+                <div className="text-center flex-1">
+                  <p className="uppercase tracking-widest font-semibold"
+                    style={{ color: "rgba(255,255,255,0.25)", fontSize: "clamp(0.45rem, 0.65vw, 0.55rem)" }}>
+                    {MESES_NOMES[mesPrevio! - 1]}
+                  </p>
+                  <p className="font-bold font-mono tabular-nums leading-none mt-1"
+                    style={{ color: "rgba(255,255,255,0.6)", fontSize: "clamp(1.5rem, 3vw, 2.5rem)" }}>
+                    {pctPrevio.toFixed(1)}%
+                  </p>
+                </div>
+                <div style={{ color: "rgba(255,255,255,0.15)", fontSize: "clamp(1.2rem, 2.5vw, 2rem)", padding: "0 12px" }}>
+                  →
+                </div>
+                <div className="text-center flex-1">
+                  <p className="uppercase tracking-widest font-semibold"
+                    style={{ color: "rgba(255,255,255,0.25)", fontSize: "clamp(0.45rem, 0.65vw, 0.55rem)" }}>
+                    {MESES_NOMES[mesAtual - 1]}
+                  </p>
+                  <p className="font-bold font-mono tabular-nums leading-none mt-1"
+                    style={{ color: p.hero, fontSize: "clamp(1.5rem, 3vw, 2.5rem)" }}>
+                    {pct.toFixed(1)}%
+                  </p>
+                </div>
+              </div>
+              {diff !== null && (
+                <div className="text-center mt-2">
+                  <span className="font-semibold"
+                    style={{
+                      color: diff <= 0 ? "#22c55e" : "#ef4444",
+                      fontSize: "clamp(0.6rem, 0.9vw, 0.75rem)",
+                    }}>
+                    {diff <= 0 ? "↓ Melhorou" : "↑ Piorou"} {Math.abs(diff).toFixed(1)}% em relação ao mês anterior
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      <div className={`relative z-10 ${p.faixa}`} style={{ padding: "clamp(0.5rem, 0.9vh, 0.8rem) 0" }}>
-        <p className="text-center font-black text-white uppercase tracking-[0.3em]"
-          style={{ fontSize: "clamp(0.8rem, 1.4vw, 1.2rem)" }}>
-          {statusLabel}
-        </p>
-      </div>
+      <div style={{
+        height: 4,
+        background: `linear-gradient(90deg, ${p.faixa}, ${p.faixa}88, transparent)`,
+      }} />
     </div>
   );
 }
