@@ -14,7 +14,9 @@ import GraficoAnual from "@/components/GraficoAnual";
 import TabelaRegistros from "@/components/TabelaRegistros";
 import ModalConfiguracoes from "@/components/ModalConfiguracoes";
 import AnaliseMotivoRefugo from "@/components/AnaliseMotivoRefugo";
-import { Menu, ChevronLeft, ChevronRight, Download, Sun, Moon, Clock, LogOut } from "lucide-react";
+import ModoTV from "@/components/ModoTV";
+import { useTVMode } from "@/hooks/useTVMode";
+import { Menu, ChevronLeft, ChevronRight, Download, Sun, Moon, Clock, LogOut, Monitor } from "lucide-react";
 import { generateMonthlyPDF } from "@/lib/generatePDF";
 import { toast } from "sonner";
 
@@ -26,6 +28,7 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [exportandoPDF, setExportandoPDF] = useState(false);
   const [agora, setAgora] = useState(new Date());
+  const tvState = useTVMode();
 
   useEffect(() => {
     const timer = setInterval(() => setAgora(new Date()), 1000);
@@ -132,6 +135,16 @@ export default function Home() {
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Modo TV */}
+              <button
+                onClick={() => tvState.entrar()}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-indigo-700 hover:bg-indigo-800 rounded-lg transition-colors"
+                title="Ativar Modo TV (tela cheia com slides)"
+              >
+                <Monitor className="w-4 h-4" />
+                <span className="hidden sm:inline">Modo TV</span>
+              </button>
+
               {/* Exportar PDF */}
               <button
                 onClick={handleExportPDF}
@@ -230,6 +243,9 @@ export default function Home() {
       {modalConfig && (
         <ModalConfiguracoes onClose={() => setModalConfig(false)} />
       )}
+
+      {/* Modo TV (tela cheia) */}
+      {tvState.isTVMode && <ModoTV tvState={tvState} />}
     </div>
   );
 }
