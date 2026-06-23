@@ -172,12 +172,44 @@ function Metrica({ label, valor, cor }: MetricaProps) {
 
 // ─── Sub-componente: Slide de Dashboard ──────────────────────────────────────
 
+function formatNumCompacto(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
+  return n.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+}
+
+function BarraMes({ pct, meta, ativo }: { pct: number; meta: number; ativo: boolean }) {
+  const alturaMax = 100;
+  const altura = pct > 0 ? Math.max((pct / (meta * 1.8)) * alturaMax, 3) : 3;
+  const cor =
+    !ativo ? "rgba(255,255,255,0.1)"
+    : pct <= meta * 0.8 ? "#22c55e"
+    : pct <= meta ? "#f59e0b"
+    : "#ef4444";
+  return (
+    <div className="flex flex-col items-center gap-1 flex-1" style={{ minWidth: 0 }}>
+      <div style={{ height: alturaMax, display: "flex", alignItems: "flex-end", width: "100%" }}>
+        <div style={{
+          width: "100%",
+          height: `${altura}%`,
+          background: cor,
+          borderRadius: "3px 3px 0 0",
+          transition: "all 0.6s ease",
+          opacity: ativo ? 1 : 0.4,
+        }} />
+      </div>
+    </div>
+  );
+}
+
 function SlideDashboard() {
-  const { mesAtual, anoAtual, getTotaisMes, metaRefugo, meses } = useDashboard();
+  const { mesAtual, anoAtual, setMesAtual, getTotaisMes, metaRefugo, meses } = useDashboard();
   const totais = getTotaisMes(mesAtual);
   const diasRegistrados = meses.find(m => m.mes === mesAtual)?.registros.length ?? 0;
 
-  // Status baseado na meta
+  const mesPrevio = mesAtual > 1 ? mesAtual - 1 : null;
+  const totaisPrevios = mesPrevio ? getTotaisMes(mesPrevio) : null;
+
   const pct = totais.percentRefugo;
   const temDados = pct > 0;
   const status: "ok" | "atencao" | "critico" | "vazio" =
@@ -186,9 +218,9 @@ function SlideDashboard() {
     pct <= metaRefugo ? "atencao" : "critico";
 
   const palette = {
-    ok:      { hero: "#22c55e", glow: "rgba(34,197,94,0.18)",  texto: "#86efac", fundo: "rgba(34,197,94,0.06)"  },
-    atencao: { hero: "#f59e0b", glow: "rgba(245,158,11,0.18)", texto: "#fcd34d", fundo: "rgba(245,158,11,0.06)" },
-    critico: { hero: "#ef4444", glow: "rgba(239,68,68,0.22)",  texto: "#fca5a5", fundo: "rgba(239,68,68,0.08)"  },
+    ok:      { hero: "#22c55e", glow: "rgba(34,197,94,0.15)",  texto: "#86efac", fundo: "rgba(34,197,94,0.06)"  },
+    atencao: { hero: "#f59e0b", glow: "rgba(245,158,11,0.15)", texto: "#fcd34d", fundo: "rgba(245,158,11,0.06)" },
+    critico: { hero: "#ef4444", glow: "rgba(239,68,68,0.18)",  texto: "#fca5a5", fundo: "rgba(239,68,68,0.08)"  },
     vazio:   { hero: "#64748b", glow: "rgba(100,116,139,0.1)", texto: "#94a3b8", fundo: "rgba(100,116,139,0.04)" },
   };
   const p = palette[status];
@@ -196,21 +228,38 @@ function SlideDashboard() {
   const pctAnimado = useCountUp(pct, 1400);
   const producaoAnimada = useCountUp(totais.totalProducao, 1200);
   const refugoAnimado = useCountUp(totais.totalRefugo, 1200);
-  const totalAnimado = useCountUp(totais.total, 1200);
 
-  const StatusIcon = status === "ok" ? CheckCircle2 : status === "critico" ? AlertTriangle : TrendingUp;
+  const StatusIcon = status === "ok" ? CheckCircle2 : AlertTriangle;
+
+  let tendenciaIcon = null;
+  let tendenciaLabel = "";
+  let tendenciaCor = "";
+  if (totaisPrevios && totaisPrevios.percentRefugo > 0 && temDados) {
+    const diff = pct - totaisPrevios.percentRefugo;
+    if (Math.abs(diff) < 0.5) {
+      tendenciaIcon = null;
+      tendenciaLabel = "Estável em relação ao mês anterior";
+      tendenciaCor = "rgba(255,255,255,0.4)";
+    } else if (diff < 0) {
+      tendenciaIcon = <TrendingDown style={{ width: 18, height: 18 }} />;
+      tendenciaLabel = `Melhor que ${MESES_NOMES[mesPrevio! - 1]}`;
+      tendenciaCor = "#22c55e";
+    } else {
+      tendenciaIcon = <TrendingUp style={{ width: 18, height: 18 }} />;
+      tendenciaLabel = `Pior que ${MESES_NOMES[mesPrevio! - 1]}`;
+      tendenciaCor = "#ef4444";
+    }
+  }
 
   return (
     <div className="flex flex-col h-full overflow-hidden" style={{ background: "#080C18" }}>
 
-      {/* Glow de status no fundo */}
       <div className="absolute inset-0 pointer-events-none"
         style={{
           background: `radial-gradient(ellipse 70% 50% at 50% 100%, ${p.glow}, transparent)`,
           transition: "background 1s ease",
         }} />
 
-      {/* Header */}
       <div className="relative z-10 flex items-center justify-between px-10 pt-8 pb-4">
         <div>
           <p className="uppercase tracking-[0.25em] font-bold"
@@ -226,95 +275,109 @@ function SlideDashboard() {
         <RelogioTV />
       </div>
 
-      {/* Corpo principal */}
-      <div className="relative z-10 flex flex-1 items-center justify-center gap-12 px-10 pb-6">
+      <div className="relative z-10 flex flex-1 items-center justify-center gap-8 px-10 pb-4">
 
-        {/* Hero: arco + % refugo */}
         <div className="flex flex-col items-center justify-center flex-shrink-0" style={{ position: "relative" }}>
           <ArcProgress
             percent={pct}
             meta={metaRefugo}
             cor={p.hero}
             corMeta="rgba(255,255,255,0.5)"
-            size={320}
+            size={280}
           />
-          {/* Valor centralizado sobre o arco */}
           <div className="absolute flex flex-col items-center" style={{ top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}>
             <span className="font-black font-mono tabular-nums leading-none"
-              style={{ color: p.hero, fontSize: "clamp(3rem, 7vw, 5.5rem)", textShadow: `0 0 40px ${p.hero}` }}>
+              style={{ color: p.hero, fontSize: "clamp(2.5rem, 5.5vw, 4.5rem)", textShadow: `0 0 40px ${p.hero}` }}>
               {temDados ? `${pctAnimado.toFixed(1)}%` : "—"}
             </span>
             <span className="uppercase tracking-widest font-bold mt-1"
-              style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.55rem, 0.85vw, 0.75rem)" }}>
+              style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.5rem, 0.75vw, 0.65rem)" }}>
               % Refugo
             </span>
           </div>
 
-          {/* Badge de status */}
-          <div className="flex items-center gap-2 mt-3 px-4 py-2 rounded-full"
+          <div className="flex items-center gap-2 mt-2 px-4 py-2 rounded-full"
             style={{ background: p.fundo, border: `1px solid ${p.hero}40` }}>
             <StatusIcon style={{ width: 16, height: 16, color: p.hero }} />
             <span className="font-bold uppercase tracking-wider"
-              style={{ color: p.texto, fontSize: "clamp(0.6rem, 0.95vw, 0.8rem)" }}>
+              style={{ color: p.texto, fontSize: "clamp(0.55rem, 0.85vw, 0.7rem)" }}>
               {status === "ok" ? "Dentro da Meta" :
                status === "atencao" ? "Atenção — Próximo da Meta" :
                status === "critico" ? "Acima da Meta!" : "Sem dados"}
             </span>
           </div>
 
-          {/* Meta */}
           <p className="mt-2 font-semibold"
-            style={{ color: "rgba(255,255,255,0.25)", fontSize: "clamp(0.6rem, 0.9vw, 0.75rem)" }}>
+            style={{ color: "rgba(255,255,255,0.25)", fontSize: "clamp(0.5rem, 0.8vw, 0.65rem)" }}>
             Meta: ≤ {metaRefugo}%  •  {diasRegistrados} dia{diasRegistrados !== 1 ? "s" : ""} registrado{diasRegistrados !== 1 ? "s" : ""}
           </p>
         </div>
 
-        {/* Métricas secundárias — coluna */}
-        <div className="flex flex-col gap-4 flex-1 max-w-xs">
-          <Metrica label="Produção Total" valor={formatNum(producaoAnimada)} cor="#60a5fa" />
-          <Metrica label="Total Refugo"   valor={formatNum(refugoAnimado)}   cor={totais.totalRefugo > 0 ? "#f87171" : "#64748b"} />
-          <Metrica label="Total Geral"    valor={formatNum(totalAnimado)}    cor="#e2e8f0" />
+        <div className="flex flex-col gap-4 flex-1" style={{ maxWidth: 480 }}>
 
-          {/* Barra linear refugo/produção */}
+          {temDados && (
+            <div className="flex items-center gap-3 rounded-2xl px-6 py-4"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              {tendenciaIcon && <span style={{ color: tendenciaCor }}>{tendenciaIcon}</span>}
+              <span style={{ color: tendenciaCor, fontSize: "clamp(0.8rem, 1.4vw, 1.1rem)", fontWeight: 700 }}>
+                {tendenciaLabel}
+              </span>
+              {totaisPrevios && totaisPrevios.percentRefugo > 0 && (
+                <span style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.6rem, 1vw, 0.8rem)", marginLeft: "auto" }}>
+                  Mês anterior: {totaisPrevios.percentRefugo.toFixed(1)}%
+                </span>
+              )}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <Metrica label="Produção Total" valor={formatNumCompacto(producaoAnimada)} cor="#60a5fa" />
+            <Metrica label="Total Refugo" valor={formatNumCompacto(refugoAnimado)} cor={totais.totalRefugo > 0 ? "#f87171" : "#64748b"} />
+          </div>
+
           <div className="rounded-2xl px-6 py-4"
             style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
-            <div className="flex justify-between mb-2">
+            <div className="flex items-center justify-between mb-3">
               <span className="uppercase tracking-widest font-semibold"
-                style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.55rem, 0.9vw, 0.7rem)" }}>
-                Refugo vs Produção
+                style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.5rem, 0.8vw, 0.65rem)" }}>
+                % Refugo por Mês
               </span>
-              <span style={{ color: p.texto, fontSize: "clamp(0.55rem, 0.9vw, 0.7rem)", fontWeight: 700 }}>
-                {temDados ? `${pct.toFixed(1)}%` : "—"}
+              <span style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.5rem, 0.8vw, 0.65rem)", fontWeight: 600 }}>
+                Meta {metaRefugo}%
               </span>
             </div>
-            <div className="rounded-full overflow-hidden" style={{ height: 10, background: "rgba(255,255,255,0.08)" }}>
-              <div className="h-full rounded-full"
-                style={{
-                  width: `${Math.min(pct / (metaRefugo * 1.5) * 100, 100)}%`,
-                  background: `linear-gradient(90deg, ${p.hero}99, ${p.hero})`,
-                  transition: "width 1.4s cubic-bezier(0.34,1.56,0.64,1)",
-                }} />
+            <div className="flex items-end gap-1.5" style={{ height: 64 }}>
+              {Array.from({ length: 12 }, (_, i) => {
+                const mes = i + 1;
+                const t = getTotaisMes(mes);
+                return (
+                  <button key={mes} onClick={() => setMesAtual(mes)} className="flex-1 flex flex-col items-center gap-0.5" style={{ cursor: "pointer" }}>
+                    <BarraMes pct={t.percentRefugo} meta={metaRefugo} ativo={mes === mesAtual} />
+                    <span style={{
+                      fontSize: "clamp(0.4rem, 0.6vw, 0.55rem)",
+                      color: mes === mesAtual ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.25)",
+                      fontWeight: mes === mesAtual ? 700 : 500,
+                    }}>
+                      {MESES_NOMES[i].slice(0, 3)}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-            {/* Marcador da meta */}
-            <div className="relative h-0 mt-0">
+            <div className="relative mt-1" style={{ height: 2 }}>
               <div style={{
                 position: "absolute",
-                left: `${Math.min((metaRefugo / (metaRefugo * 1.5)) * 100, 100)}%`,
-                top: -14,
-                transform: "translateX(-50%)",
-                color: "rgba(255,255,255,0.5)",
-                fontSize: 9,
-                fontWeight: 700,
-                letterSpacing: "0.1em",
-              }}>
-                META
-              </div>
+                left: `${Math.min((metaRefugo / (metaRefugo * 1.8)) * 100, 100)}%`,
+                top: 0,
+                width: "1px",
+                height: 66,
+                background: "rgba(255,255,255,0.3)",
+              }} />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Rodapé */}
       <div className="relative z-10 text-center pb-3"
         style={{ color: "rgba(255,255,255,0.12)", fontSize: "clamp(0.55rem, 0.8vw, 0.7rem)", fontWeight: 600, letterSpacing: "0.15em" }}>
         IMPLATEC PERFIS PLÁSTICOS ® — SISTEMA DE CONTROLE DE QUALIDADE
