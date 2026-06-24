@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { listarSlides, MuralSlide } from "@/services/muralService";
 import { buscarClima, DadosClima } from "@/services/weatherService";
+import { aniversariantesDoMes } from "@/lib/initialData";
 
 export type TipoSlide = "dashboard" | "clima" | "aniversariantes" | "imagem";
 
@@ -12,6 +13,7 @@ export interface TVModeState {
   totalImagens: number;
   progresso: number;
   dadosClima: DadosClima | null;
+  temAniversariantes: boolean;
   entrar: () => Promise<void>;
   sair: () => void;
   avancar: () => void;
@@ -40,6 +42,7 @@ export function useTVMode(): TVModeState {
   const [progresso,     setProgresso]     = useState(0);
   const [imagens,       setImagens]       = useState<MuralSlide[]>([]);
   const [dadosClima,    setDadosClima]    = useState<DadosClima | null>(null);
+  const [temAniversariantes, setTemAniversariantes] = useState(false);
 
   const intervalRef      = useRef<ReturnType<typeof setInterval> | null>(null);
   const progressoRef     = useRef(0);
@@ -65,8 +68,19 @@ export function useTVMode(): TVModeState {
       indiceImagemRef.current = 0;
       setIndiceImagem(0);
     } else if (tipoAtualRef.current === "clima") {
-      tipoAtualRef.current = "aniversariantes";
-      setTipoSlide("aniversariantes");
+      const mes = new Date().getMonth() + 1;
+      const tem = aniversariantesDoMes(mes).length > 0;
+      setTemAniversariantes(tem);
+      if (tem) {
+        tipoAtualRef.current = "aniversariantes";
+        setTipoSlide("aniversariantes");
+      } else if (imgs.length > 0) {
+        tipoAtualRef.current = "imagem";
+        setTipoSlide("imagem");
+      } else {
+        tipoAtualRef.current = "dashboard";
+        setTipoSlide("dashboard");
+      }
       indiceImagemRef.current = 0;
       setIndiceImagem(0);
     } else if (tipoAtualRef.current === "aniversariantes") {
@@ -135,6 +149,9 @@ export function useTVMode(): TVModeState {
     buscarClima("Joinville")
       .then(setDadosClima)
       .catch(() => {});
+
+    const mesAtual = new Date().getMonth() + 1;
+    setTemAniversariantes(aniversariantesDoMes(mesAtual).length > 0);
 
     tipoAtualRef.current  = "dashboard";
     indiceImagemRef.current = 0;
@@ -215,6 +232,7 @@ export function useTVMode(): TVModeState {
     totalImagens: imagens.length,
     progresso,
     dadosClima,
+    temAniversariantes,
     entrar,
     sair,
     avancar: avancarSlide,

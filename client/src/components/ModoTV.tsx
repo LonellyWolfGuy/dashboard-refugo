@@ -11,7 +11,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useDashboard } from "@/contexts/DashboardContext";
 import { useTVMode } from "@/hooks/useTVMode";
-import { MESES_NOMES } from "@/lib/initialData";
+import { MESES_NOMES, aniversariantesDoMes } from "@/lib/initialData";
 import { X, ChevronRight, TrendingDown, TrendingUp, AlertTriangle, CheckCircle2, Cloud, Thermometer, Droplets } from "lucide-react";
 import { buscarClima, descricaoTempo, iconeTempo, DadosClima } from "@/services/weatherService";
 
@@ -499,35 +499,6 @@ function SlideClima({ dadosClima }: SlideClimaProps) {
 
 // ─── Sub-componente: Slide de Aniversariantes ──────────────────────────────────
 
-const ANIVERSARIANTES = [
-  { nome: "Anderson Dias Cezar", nascimento: "01/11/1982", admissao: "04/02/2019" },
-  { nome: "Anderson Pereira de Souza", nascimento: "02/12/1985", admissao: "27/09/2016" },
-  { nome: "Ari de Jesus Martins Ribeiro", nascimento: "15/05/1966", admissao: "09/09/2024" },
-  { nome: "Cleidivan Alves Rodrigues", nascimento: "03/12/2005", admissao: "24/07/2024" },
-  { nome: "Daniel Menezes Cordeiro Junior", nascimento: "25/12/2000", admissao: "22/08/2024" },
-  { nome: "Edson Rieg", nascimento: "07/02/1989", admissao: "12/06/2025" },
-  { nome: "Fernanda de Oliveira Buch", nascimento: "25/08/1989", admissao: "05/01/2026" },
-  { nome: "Jaziel Santana da Silva", nascimento: "20/05/1960", admissao: "—" },
-  { nome: "Jean Carlos Vicente", nascimento: "28/09/1993", admissao: "22/05/2023" },
-  { nome: "Jeniffer Rosangela de Souza Hug Walter", nascimento: "04/09/1986", admissao: "01/07/2005" },
-  { nome: "Jesse Santana da Silva", nascimento: "20/04/1953", admissao: "01/02/2024" },
-  { nome: "Jonas Ramos da Silva", nascimento: "24/09/1985", admissao: "29/05/2018" },
-  { nome: "Jorge Juan Pinto Coelho", nascimento: "08/04/2005", admissao: "23/03/2026" },
-  { nome: "Kayke Pablo Beil Kalfels", nascimento: "01/10/2004", admissao: "06/01/2025" },
-  { nome: "Maycon Sena Bezerra", nascimento: "02/07/2006", admissao: "16/07/2024" },
-  { nome: "Odenir Rassweiler", nascimento: "14/09/1967", admissao: "17/01/2022" },
-  { nome: "Paulo Otavio Santos de Oliveira", nascimento: "01/12/2006", admissao: "11/05/2026" },
-  { nome: "Renato Lemos Correa", nascimento: "07/12/1987", admissao: "15/07/2021" },
-  { nome: "Thayna Dorneles da Silveira", nascimento: "10/06/1999", admissao: "10/03/2026" },
-  { nome: "Thiago Fischer", nascimento: "28/03/1985", admissao: "03/09/2018" },
-  { nome: "Veralucia da Silva Alves de Oliveira", nascimento: "14/02/1972", admissao: "01/08/1999" },
-  { nome: "Victor Alves de Lima", nascimento: "26/09/1999", admissao: "19/04/2022" },
-];
-
-function nascimentoParaMes(dataStr: string): number {
-  return parseInt(dataStr.split("/")[1], 10);
-}
-
 function formatarDataBR(dataStr: string): string {
   const [dia, mes] = dataStr.split("/");
   return `${dia}/${mes}`;
@@ -541,33 +512,42 @@ function SlideAniversariantes() {
   }, []);
 
   const mesAtual = agora.getMonth() + 1;
-  const aniversariantes = ANIVERSARIANTES.filter(
-    p => nascimentoParaMes(p.nascimento) === mesAtual
-  );
-
-  const sorted = [...aniversariantes].sort(
-    (a, b) => parseInt(a.nascimento.split("/")[0], 10) - parseInt(b.nascimento.split("/")[0], 10)
-  );
+  const sorted = aniversariantesDoMes(mesAtual);
 
   const hora = agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   const data = agora.toLocaleDateString("pt-BR", {
     weekday: "long", day: "2-digit", month: "long",
   });
 
+  const total = sorted.length;
+  const cols = total <= 2 ? total : total <= 4 ? 2 : 3;
+
   return (
-    <div className="flex flex-col h-full overflow-hidden" style={{ background: "linear-gradient(135deg, #1a0a2e 0%, #2d1b4e 40%, #16213e 100%)" }}>
+    <div className="flex flex-col h-full overflow-hidden" style={{ background: "linear-gradient(135deg, #0f0a1a 0%, #1a0a2e 30%, #2d1b4e 60%, #0f172a 100%)" }}>
+
       <div className="absolute inset-0 pointer-events-none" style={{
-        background: "radial-gradient(ellipse 60% 40% at 50% 0%, rgba(236,72,153,0.12), transparent), radial-gradient(ellipse 80% 50% at 50% 100%, rgba(168,85,247,0.08), transparent)",
+        background: `
+          radial-gradient(ellipse 50% 30% at 50% 0%, rgba(236,72,153,0.15), transparent),
+          radial-gradient(ellipse 40% 30% at 80% 80%, rgba(168,85,247,0.1), transparent),
+          radial-gradient(ellipse 30% 30% at 20% 70%, rgba(251,191,36,0.06), transparent)
+        `,
       }} />
+
+      <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">
+        <span style={{ position: "absolute", top: "8%", left: "5%", fontSize: "clamp(2rem, 4vw, 3.5rem)", opacity: 0.15, transform: "rotate(-15deg)" }}>🎉</span>
+        <span style={{ position: "absolute", top: "12%", right: "8%", fontSize: "clamp(2.5rem, 5vw, 4rem)", opacity: 0.12, transform: "rotate(20deg)" }}>🎈</span>
+        <span style={{ position: "absolute", bottom: "15%", left: "10%", fontSize: "clamp(1.8rem, 3.5vw, 3rem)", opacity: 0.1 }}>🎁</span>
+        <span style={{ position: "absolute", bottom: "20%", right: "5%", fontSize: "clamp(2rem, 4vw, 3.5rem)", opacity: 0.12, transform: "rotate(-10deg)" }}>🎂</span>
+      </div>
 
       <div className="relative z-10 flex items-start justify-between px-10 pt-6">
         <div>
           <p className="uppercase tracking-widest font-bold"
             style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.85rem, 1.2vw, 1.1rem)" }}>
-            Implatec — Aniversariantes
+            Implatec — Aniversariantes do Mês
           </p>
           <h2 className="font-black text-white capitalize leading-none mt-1"
-            style={{ fontSize: "clamp(1.8rem, 3vw, 2.8rem)" }}>
+            style={{ fontSize: "clamp(2rem, 3.5vw, 3.2rem)" }}>
             {MESES_NOMES[mesAtual - 1]}
           </h2>
         </div>
@@ -583,77 +563,68 @@ function SlideAniversariantes() {
         </div>
       </div>
 
-      {sorted.length > 0 ? (
-        <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-14 pb-6 gap-5">
-          <div style={{
-            width: 64, height: 64,
-            background: "rgba(236,72,153,0.15)",
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "clamp(2rem, 4vw, 3rem)",
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-10 pb-6 gap-6">
+        <div className="flex items-center gap-3">
+          <span style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)", lineHeight: 1 }}>🎂</span>
+          <span className="font-black" style={{
+            fontSize: "clamp(1.6rem, 3vw, 2.5rem)",
+            background: "linear-gradient(135deg, #f9a8d4, #e879f9, #c084fc)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
           }}>
-            🎂
-          </div>
+            {total} aniversariante{total !== 1 ? "s" : ""}
+          </span>
+        </div>
 
-          <div className="grid gap-5 w-full" style={{
-            gridTemplateColumns: sorted.length === 1 ? "1fr" : "repeat(auto-fit, minmax(320px, 1fr))",
-            maxWidth: sorted.length <= 2 ? "800px" : "1200px",
-          }}>
-            {sorted.map((p) => (
-              <div key={p.nome} className="rounded-3xl px-8 py-6 text-center"
+        <div className="grid gap-4 w-full" style={{
+          gridTemplateColumns: `repeat(${cols}, 1fr)`,
+          maxWidth: total <= 2 ? "800px" : "1200px",
+        }}>
+          {sorted.map((p, i) => {
+            const hue = (i * 60 + 330) % 360;
+            return (
+              <div key={p.nome} className="rounded-3xl px-6 py-7 text-center relative overflow-hidden"
                 style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(236,72,153,0.2)",
-                  backdropFilter: "blur(8px)",
+                  background: `linear-gradient(135deg, hsla(${hue}, 80%, 60%, 0.12), hsla(${hue}, 80%, 60%, 0.04))`,
+                  border: `1px solid hsla(${hue}, 80%, 70%, 0.2)`,
                 }}>
+                <div className="text-3xl mb-3">🎉</div>
                 <p className="font-black text-white leading-tight"
-                  style={{ fontSize: "clamp(1.6rem, 3vw, 2.4rem)" }}>
+                  style={{ fontSize: "clamp(1.4rem, 2.5vw, 2rem)" }}>
                   {p.nome}
                 </p>
-                <div className="flex items-center justify-center gap-6 mt-4">
-                  <div>
-                    <p className="uppercase tracking-widest font-semibold"
-                      style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.6rem, 0.9vw, 0.75rem)" }}>
+                <div className="flex items-center justify-center gap-5 mt-4">
+                  <div className="flex flex-col items-center">
+                    <span className="uppercase tracking-widest font-semibold"
+                      style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.55rem, 0.8vw, 0.7rem)" }}>
                       Nascimento
-                    </p>
-                    <p className="font-bold font-mono tabular-nums"
-                      style={{ color: "rgba(244,114,182,0.9)", fontSize: "clamp(1.2rem, 2vw, 1.6rem)" }}>
+                    </span>
+                    <span className="font-bold font-mono tabular-nums mt-1"
+                      style={{ color: `hsla(${hue}, 80%, 75%, 0.9)`, fontSize: "clamp(1.1rem, 1.8vw, 1.5rem)" }}>
                       {formatarDataBR(p.nascimento)}
-                    </p>
+                    </span>
                   </div>
-                  <div style={{ width: 1, height: 32, background: "rgba(255,255,255,0.1)" }} />
-                  <div>
-                    <p className="uppercase tracking-widest font-semibold"
-                      style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.6rem, 0.9vw, 0.75rem)" }}>
+                  <div style={{ width: 1, height: 36, background: "rgba(255,255,255,0.08)" }} />
+                  <div className="flex flex-col items-center">
+                    <span className="uppercase tracking-widest font-semibold"
+                      style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.55rem, 0.8vw, 0.7rem)" }}>
                       Admissão
-                    </p>
-                    <p className="font-bold font-mono tabular-nums"
-                      style={{ color: "rgba(148,163,184,0.9)", fontSize: "clamp(1.2rem, 2vw, 1.6rem)" }}>
+                    </span>
+                    <span className="font-bold font-mono tabular-nums mt-1"
+                      style={{ color: "rgba(255,255,255,0.6)", fontSize: "clamp(1.1rem, 1.8vw, 1.5rem)" }}>
                       {p.admissao}
-                    </p>
+                    </span>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
-      ) : (
-        <div className="relative z-10 flex-1 flex flex-col items-center justify-center gap-4">
-          <p className="font-black text-white/20" style={{ fontSize: "clamp(3rem, 6vw, 5rem)" }}>
-            🎈
-          </p>
-          <p className="font-semibold text-center"
-            style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(1.5rem, 3vw, 2.5rem)" }}>
-            Nenhum aniversariante este mês
-          </p>
-        </div>
-      )}
+      </div>
 
       <div style={{
         height: 3,
-        background: "linear-gradient(90deg, #ec4899, #a855f7, transparent)",
+        background: "linear-gradient(90deg, #ec4899, #a855f7, #6366f1, transparent)",
       }} />
     </div>
   );
@@ -720,7 +691,7 @@ interface ModoTVProps {
 }
 
 export default function ModoTV({ tvState }: ModoTVProps) {
-  const { tipoSlide, slideImagem, indiceImagem, totalImagens, progresso, dadosClima, sair, avancar } = tvState;
+  const { tipoSlide, slideImagem, indiceImagem, totalImagens, progresso, dadosClima, temAniversariantes, sair, avancar } = tvState;
 
   const [fadeKey, setFadeKey] = useState(0);
   const [showControls, setShowControls] = useState(false);
@@ -745,8 +716,9 @@ export default function ModoTV({ tvState }: ModoTVProps) {
     };
   }, []);
 
-  const totalSlides = 3 + totalImagens;
-  const indiceGlobal = tipoSlide === "dashboard" ? 0 : tipoSlide === "clima" ? 1 : tipoSlide === "aniversariantes" ? 2 : indiceImagem + 3;
+  const totalSlides = (temAniversariantes ? 3 : 2) + totalImagens;
+  const baseImagem = temAniversariantes ? 3 : 2;
+  const indiceGlobal = tipoSlide === "dashboard" ? 0 : tipoSlide === "clima" ? 1 : tipoSlide === "aniversariantes" ? 2 : indiceImagem + baseImagem;
 
   const barCor =
     tipoSlide === "dashboard" ? "linear-gradient(90deg,#1d4ed8,#60a5fa)" :
