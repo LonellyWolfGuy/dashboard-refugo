@@ -1,6 +1,6 @@
 # 📊 Dashboard de Controle de Refugo — V2 (Modernizado por Thiago Fischer)
 
-> **Status: 🟢 Versão 2.1 Estável** (Maio 2026)
+> **Status: 🟢 Versão 2.2 Estável** (Junho 2026)
 
 [![Deploy on Vercel](https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel)](https://vercel.com)
 [![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?logo=supabase)](https://supabase.com)
@@ -20,6 +20,10 @@ Sistema web para controle e análise de refugo industrial. Permite lançar regis
 - **Segurança Reforçada (RLS)** — Implantação de _Row Level Security_ para blindar acessos indevidos a dados de outras sessões (quando no Supabase).
 - **Optimistic Updates** — Sincronização instantânea na UI; registros aparecem, editam e somem da tela no exato momento do clique, com tratamento de erro e rollback automático. (Implementado por Thiago Fischer)
 - **Performance de Elite** — Memoização profunda de estados derivados e processamento de meses, garantindo fluidez mesmo com centenas de registros. (Implementado por Thiago Fischer)
+- **Modo TV** — Modo de exibição em tela cheia para TV industrial com 4 tipos de slide: dashboard com métricas animadas, clima (Open-Meteo), aniversariantes do mês e imagens do mural. Ciclo automático com progresso visual. (Implementado por Thiago Fischer)
+- **Slide de Aniversariantes** — Exibe aniversariantes do mês corrente com design festivo; pula automaticamente se não houver dados. (Implementado por Thiago Fischer)
+- **Slide de Clima** — Previsão do tempo para Joinville via Open-Meteo (gratuito, sem chave de API) com temperatura atual e previsão de 3 dias. (Implementado por Thiago Fischer)
+- **Mural de Imagens** — Upload e gerenciamento de slides (JPG/PNG/WEBP) via Supabase Storage para exibição no Modo TV. (Implementado por Thiago Fischer)
 
 ---
 
@@ -38,6 +42,8 @@ Sistema web para controle e análise de refugo industrial. Permite lançar regis
 - **Dados preservados entre deploys** — atualizações de código nunca sobrescrevem os dados do banco; cada registro é uma linha independente no Supabase, eliminando race conditions e sobrescrita acidental
 - **Tema claro/escuro** — alternância manual pelo cabeçalho
 - **Totalmente Responsivo** — layout inteligente que alterna entre tabela (Desktop) e Cards (Mobile) para máxima usabilidade em qualquer tela
+- **Modo TV** — tela cheia com slideshow automático: dashboard com % refugo animado, clima, aniversariantes do mês e imagens do mural
+- **Mural de Imagens** — upload de fotos da fábrica com legendas para exibição no Modo TV
 
 ---
 
@@ -73,24 +79,36 @@ dashboard-refugo/
 │       │   ├── TabelaRegistros.tsx     # Tabela de lançamentos com CRUD
 │       │   ├── AnaliseMotivoRefugo.tsx # Análise por motivo
 │       │   ├── Sidebar.tsx             # Menu lateral com navegação por mês
-│       │   ├── ModalConfiguracoes.tsx  # Configurações (meta, motivos)
-│       │   └── ModalMotivoRefugo.tsx   # Modal de motivos por lançamento
+│       │   ├── ModalConfiguracoes.tsx  # Configurações (meta, motivos, dados, Modo TV)
+│       │   ├── ModalMotivoRefugo.tsx   # Modal de motivos por lançamento
+│       │   ├── ModoTV.tsx              # Modo TV fullscreen (dashboard, clima, aniversariantes, imagens)
+│       │   └── ErrorBoundary.tsx       # Limite de erro do React
 │       ├── contexts/
 │       │   ├── AuthContext.tsx         # Estado de autenticação + Supabase Auth
 │       │   ├── DashboardContext.tsx    # Estado global + persistência instantânea no Supabase
 │       │   └── ThemeContext.tsx        # Controle de tema claro/escuro
+│       ├── hooks/
+│       │   └── useTVMode.ts           # Hook de controle do Modo TV (ciclo, timer, navegação)
 │       ├── lib/
 │       │   ├── supabase.ts             # Cliente Supabase compartilhado
-│       │   ├── initialData.ts          # Tipos, interfaces e dados iniciais
+│       │   ├── initialData.ts          # Tipos, interfaces, aniversariantes e dados iniciais
 │       │   ├── generatePDF.ts          # Gerador de relatório PDF
 │       │   └── utils.ts                # Funções utilitárias
+│       ├── services/
+│       │   ├── refugoService.ts        # Operações CRUD no Supabase (registros + config)
+│       │   ├── muralService.ts         # CRUD de slides do mural (Supabase Storage)
+│       │   └── weatherService.ts       # Integração com Open-Meteo API (clima Joinville)
 │       └── pages/
 │           ├── Home.tsx                # Página principal (dashboard)
 │           ├── LoginPage.tsx           # Tela de login
 │           └── NotFound.tsx            # Página 404
-├── supabase-setup.sql                  # Script SQL para configurar o banco
-├── vercel.json                         # Configuração de deploy no Vercel
-├── vite.config.ts                      # Configuração do Vite
+├── patches/
+│   └── wouter@3.7.1.patch            # Patch do roteador Wouter
+├── supabase-setup.sql                 # Script SQL para tabelas registros + config
+├── mural-setup.sql                    # Script SQL para tabela mural_slides + storage
+├── vercel.json                        # Configuração de deploy no Vercel
+├── vite.config.ts                     # Configuração do Vite
+├── components.json                    # Configuração do shadcn/ui
 └── package.json
 ```
 
@@ -229,6 +247,17 @@ Todo o gerenciamento é feito no painel do Supabase, sem código:
 - **Modo escuro/claro** — alterna o tema
 - **Usuário logado** — nome, e-mail e botão de logout com save automático
 
+### Modo TV
+
+Botão **Modo TV** no cabeçalho ativa um slideshow fullscreen para exibição em TVs industriais. O ciclo automático percorre:
+
+1. **Dashboard** — % de refugo como métrica principal em fonte gigante, arco SVG de progresso, contagem animada (count-up), produção e refugo totais, comparação com mês anterior, indicador de status (dentro da meta / atenção / crítico)
+2. **Clima** — Temperatura e condições atuais de Joinville com previsão para 3 dias via Open-Meteo (gratuito, sem chave de API)
+3. **Aniversariantes** — Lista dos aniversariantes do mês corrente com design festivo. Pula automaticamente se não houver dados no mês
+4. **Imagens do Mural** — Fotos enviadas via configurações com título e legenda
+
+O tempo de exibição de cada slide é configurável (dashboard e imagens). Navegação manual por clique ou seta, ESC para sair.
+
 ### Botão Sair
 
 Ao clicar em **Sair**, a aplicação exibe `"Salvando dados..."`, realiza um flush completo de todos os dados no Supabase e só então encerra a sessão. Se o save falhar, a sessão é encerrada mesmo assim com aviso.
@@ -269,6 +298,12 @@ Menu lateral com navegação por mês. Cada mês exibe um indicador colorido de 
 | Formulários | [React Hook Form](https://react-hook-form.com) + [Zod](https://zod.dev) |
 | PDF | [jsPDF](https://github.com/parallax/jsPDF) |
 | Notificações | [Sonner](https://sonner.emilkowal.ski) |
+| Clima | [Open-Meteo](https://open-meteo.com) (gratuito, sem chave) |
+| Animações | [Framer Motion](https://framer.com/motion) |
+| Armazenamento | Supabase Storage (mural de imagens) |
+| Carrossel | [Embla Carousel](https://www.embla-carousel.com) |
+| Drawer/Diálogo | [Vaul](https://vaul.emilkowal.ski) + [cmdk](https://cmdk.paco.me) |
+| Data Picker | [React DayPicker](https://react-day-picker.js.org) |
 | Hospedagem | [Vercel](https://vercel.com) |
 
 ---
@@ -319,6 +354,8 @@ Acessíveis pelo ícone ⚙️ na sidebar:
 
 - **Meta de refugo (%)** — percentual alvo. Registros acima da meta são destacados em vermelho
 - **Motivos de refugo** — lista customizável disponível ao lançar um registro
+- **Dados** — exportar CSV e limpar todos os dados
+- **Modo TV** — upload de imagens (JPG/PNG/WEBP, máx. 5MB), ativar/desativar slides, configurar tempo de exibição do dashboard e das imagens
 
 ---
 
