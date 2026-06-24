@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { listarSlides, MuralSlide } from "@/services/muralService";
+import { listarSlides, getUrlOtimizada, MuralSlide } from "@/services/muralService";
 import { buscarClima, DadosClima } from "@/services/weatherService";
 import { temAniversariantesNoMes } from "@/lib/initialData";
 
@@ -35,6 +35,23 @@ function getConfig() {
   };
 }
 
+function precarregarImagem(url: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      img.decode ? img.decode().then(resolve).catch(resolve) : resolve();
+    };
+    img.onerror = () => resolve();
+    img.src = url;
+  });
+}
+
+function getProximoIndiceImagem(atual: number, total: number): number | null {
+  if (total === 0) return null;
+  const prox = atual + 1;
+  return prox < total ? prox : null;
+}
+
 export function useTVMode(): TVModeState {
   const [isTVMode,      setIsTVMode]      = useState(false);
   const [tipoSlide,     setTipoSlide]     = useState<TipoSlide>("dashboard");
@@ -49,6 +66,8 @@ export function useTVMode(): TVModeState {
   const tipoAtualRef     = useRef<TipoSlide>("dashboard");
   const indiceImagemRef  = useRef(0);
   const imagensRef       = useRef<MuralSlide[]>([]);
+  const preloadedRef     = useRef<Set<string>>(new Set());
+  const abortRef         = useRef<AbortController | null>(null);
 
   imagensRef.current = imagens;
 
@@ -56,6 +75,31 @@ export function useTVMode(): TVModeState {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
+    }
+  }, []);
+
+  const precarregarProximaImagem = useCallback(() => {
+    const imgs = imagensRef.current;
+    if (imgs.length === 0) return;
+
+    let proxIdx: number | null = null;
+
+    if (tipoAtualRef.current === "dashboard") {
+      proxIdx = 0;
+    } else if (tipoAtualRef.current === "clima") {
+      proxIdx = 0;
+    } else if (tipoAtualRef.current === "aniversariantes") {
+      proxIdx = 0;
+    } else if (tipoAtualRef.current === "imagem") {
+      proxIdx = getProximoIndiceImagem(indiceImagemRef.current, imgs.length);
+    }
+
+    if (proxIdx !== null && proxIdx < imgs.length) {
+      const urlOtimizada = getUrlOtimizada(imgs[proxIdx].storage_path);
+      if (!preloadedRef.current.has(urlOtimizada)) {
+        preloadedRef.current.add(urlOtimizada);
+        precarregarImagem(urlOtimizada);
+      }
     }
   }, []);
 
@@ -110,12 +154,16 @@ export function useTVMode(): TVModeState {
 
     progressoRef.current = 0;
     setProgresso(0);
-  }, []);
+    preloadedRef.current.clear();
+    precarregarProximaImagem();
+  }, [precarregarProximaImagem]);
 
   const iniciarCiclo = useCallback(() => {
     limparInterval();
     progressoRef.current = 0;
     setProgresso(0);
+    preloadedRef.current.clear();
+    precarregarProximaImagem();
 
     const TICK_MS = 200;
 
@@ -135,11 +183,14 @@ export function useTVMode(): TVModeState {
         avancarSlide();
       }
     }, TICK_MS);
-  }, [limparInterval, avancarSlide]);
+  }, [limparInterval, avancarSlide, precarregarProximaImagem]);
 
   const entrar = useCallback(async () => {
+    abortRef.current = new AbortController();
+
     try {
       const slides = await listarSlides();
+      if (!abortRef.current) return;
       setImagens(slides);
       imagensRef.current = slides;
     } catch (err) {
@@ -170,6 +221,7 @@ export function useTVMode(): TVModeState {
   }, []);
 
   const sair = useCallback(() => {
+    abortRef.current = null;
     limparInterval();
     setIsTVMode(false);
     setTipoSlide("dashboard");
@@ -178,6 +230,9 @@ export function useTVMode(): TVModeState {
     progressoRef.current = 0;
     tipoAtualRef.current = "dashboard";
     setDadosClima(null);
+    setImagens([]);
+    imagensRef.current = [];
+    preloadedRef.current.clear();
 
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(() => {});
@@ -220,8 +275,12 @@ export function useTVMode(): TVModeState {
     };
   }, [isTVMode, sair]);
 
-  const slideImagem = tipoSlide === "imagem" && imagens.length > 0
-    ? imagens[indiceImagem] ?? null
+  const slideAtual = tipoSlide === "imagem" && imagens.length > 0 && indiceImagem < imagens.length
+    ? imagens[indiceImagem]
+    : null;
+
+  const slideImagem = slideAtual
+    ? { ...slideAtual, url_publica: getUrlOtimizada(slideAtual.storage_path) }
     : null;
 
   return {

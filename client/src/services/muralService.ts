@@ -14,6 +14,29 @@ export interface MuralSlide {
   created_at: string;
 }
 
+// ─── Otimização de imagens ────────────────────────────────────────────────────
+
+export function getUrlOtimizada(storagePath: string): string {
+  const nomeArquivo = storagePath.replace(/^mural\//, "");
+  const { data } = supabase.storage
+    .from("mural")
+    .getPublicUrl(nomeArquivo, {
+      transform: {
+        width: 1920,
+        height: 1080,
+        resize: "contain",
+        quality: 80,
+      },
+    });
+  return data.publicUrl;
+}
+
+export function getUrlOriginal(storagePath: string): string {
+  const nomeArquivo = storagePath.replace(/^mural\//, "");
+  const { data } = supabase.storage.from("mural").getPublicUrl(nomeArquivo);
+  return data.publicUrl;
+}
+
 // ─── Leitura ──────────────────────────────────────────────────────────────────
 
 /** Retorna todos os slides ativos, ordenados por `ordem` crescente. */

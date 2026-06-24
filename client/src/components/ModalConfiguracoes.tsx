@@ -1,10 +1,10 @@
 // Design: Clean Manufacturing Dashboard
 // Modal de configurações: meta de % refugo e exportação de dados
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useDashboard } from "@/contexts/DashboardContext";
 import { MESES_NOMES } from "@/lib/initialData";
-import { X, Download, RotateCcw, Target, Plus, Trash2, Monitor, Upload, Image, ToggleLeft, ToggleRight, Loader2 } from "lucide-react";
+import { X, Download, RotateCcw, Target, Plus, Trash2, Monitor, Upload, Image, ToggleLeft, ToggleRight, Loader2, Shrink } from "lucide-react";
 import { toast } from "sonner";
 import {
   listarTodosSlides,
@@ -13,6 +13,7 @@ import {
   deletarSlide,
   MuralSlide,
 } from "@/services/muralService";
+import { redimensionarImagem, blobParaFile } from "@/lib/imageUtils";
 
 interface ModalConfiguracoesProps {
   onClose: () => void;
@@ -40,6 +41,7 @@ export default function ModalConfiguracoes({ onClose }: ModalConfiguracoesProps)
   const [novaLegenda, setNovaLegenda] = useState("");
   const [arquivoSelecionado, setArquivoSelecionado] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [infoOtimizacao, setInfoOtimizacao] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const TV_SEG_DASHBOARD_KEY = "tv_seg_dashboard";
@@ -70,16 +72,26 @@ export default function ModalConfiguracoes({ onClose }: ModalConfiguracoesProps)
     }
   }
 
-  function handleArquivoChange(e: React.ChangeEvent<HTMLInputElement>) {
+  const handleArquivoChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     setArquivoSelecionado(file);
+    setInfoOtimizacao(null);
     if (file) {
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
+      if (file.size > 1024 * 1024) {
+        try {
+          const otimizada = await redimensionarImagem(file);
+          const reducao = ((1 - otimizada.blob.size / file.size) * 100).toFixed(0);
+          if (Number(reducao) > 5) {
+            setInfoOtimizacao(`Redimensionada para ${otimizada.width}x${otimizada.height}px (${reducao}% menor)`);
+          }
+        } catch {}
+      }
     } else {
       setPreviewUrl(null);
     }
-  }
+  }, []);
 
   async function handleUpload() {
     if (!arquivoSelecionado) { toast.error("Selecione um arquivo de imagem."); return; }
@@ -92,7 +104,9 @@ export default function ModalConfiguracoes({ onClose }: ModalConfiguracoesProps)
 
     setUploadando(true);
     try {
-      await uploadImagem(arquivoSelecionado, novoTitulo.trim(), novaLegenda.trim() || undefined);
+      const otimizada = await redimensionarImagem(arquivoSelecionado);
+      const arquivoOtimizado = blobParaFile(otimizada.blob, arquivoSelecionado.name);
+      await uploadImagem(arquivoOtimizado, novoTitulo.trim(), novaLegenda.trim() || undefined);
       toast.success("Imagem enviada com sucesso!");
       setArquivoSelecionado(null);
       setPreviewUrl(null);
@@ -395,9 +409,16 @@ export default function ModalConfiguracoes({ onClose }: ModalConfiguracoesProps)
 
                 {/* Preview */}
                 {previewUrl && (
-                  <div className="mb-3 rounded-lg overflow-hidden border border-slate-200" style={{ height: 120 }}>
-                    <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-                  </div>
+                  <>
+                    <div className="mb-1 rounded-lg overflow-hidden border border-slate-200" style={{ height: 120 }}>
+                      <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                    </div>
+                    {infoOtimizacao && (
+                      <p className="flex items-center gap-1 text-xs text-emerald-600 mb-3">
+                        <Shrink className="w-3 h-3" /> {infoOtimizacao}
+                      </p>
+                    )}
+                  </>
                 )}
 
                 <div className="space-y-2">

@@ -8,11 +8,11 @@
 // • Relógio proeminente
 // • Slide de imagem com transição cinematográfica
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useDashboard } from "@/contexts/DashboardContext";
 import { useTVMode } from "@/hooks/useTVMode";
 import { MESES_NOMES, aniversariantesNascimentoDoMes, aniversariantesTempoCasaDoMes, anosDeCasa } from "@/lib/initialData";
-import { X, ChevronRight, TrendingDown, TrendingUp, AlertTriangle, CheckCircle2, Cloud, Thermometer, Droplets } from "lucide-react";
+import { X, ChevronRight, AlertTriangle, CheckCircle2, Cloud } from "lucide-react";
 import { buscarClima, descricaoTempo, iconeTempo, DadosClima } from "@/services/weatherService";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -21,26 +21,32 @@ function formatNum(n: number): string {
   return n.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
 }
 
-// Hook de count-up animado
 function useCountUp(target: number, duration = 1200): number {
   const [value, setValue] = useState(0);
+  const mountedRef = useRef(true);
   const rafRef = useRef<number>(0);
 
   useEffect(() => {
+    mountedRef.current = true;
     let start: number | null = null;
-    const initial = 0;
 
     const step = (ts: number) => {
+      if (!mountedRef.current) return;
       if (!start) start = ts;
       const elapsed = ts - start;
       const progress = Math.min(elapsed / duration, 1);
       const ease = 1 - Math.pow(1 - progress, 3);
-      setValue(initial + (target - initial) * ease);
-      if (progress < 1) rafRef.current = requestAnimationFrame(step);
+      setValue(target * ease);
+      if (progress < 1) {
+        rafRef.current = requestAnimationFrame(step);
+      }
     };
 
     rafRef.current = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(rafRef.current);
+    return () => {
+      mountedRef.current = false;
+      cancelAnimationFrame(rafRef.current);
+    };
   }, [target, duration]);
 
   return value;
@@ -201,22 +207,22 @@ function SlideDashboard() {
   const diff = temDados && temPrevio ? pct - pctPrevio : null;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden" style={{ background: "#0f1117" }}>
+    <div className="flex flex-col h-full overflow-hidden" style={{ background: "#1a1d2e" }}>
 
-      <div className="absolute inset-0 pointer-events-none opacity-40"
+      <div className="absolute inset-0 pointer-events-none opacity-50"
         style={{
-          background: `radial-gradient(ellipse 60% 40% at 50% 100%, ${p.hero}22, transparent)`,
+          background: `radial-gradient(ellipse 60% 40% at 50% 100%, ${p.hero}33, transparent)`,
         }} />
 
       <div className="relative z-10 flex items-start justify-between px-10 pt-6">
         <div>
           <p className="uppercase tracking-widest font-bold"
-            style={{ color: "rgba(255,255,255,0.35)", fontSize: "clamp(0.85rem, 1.2vw, 1.1rem)" }}>
+            style={{ color: "rgba(255,255,255,0.55)", fontSize: "clamp(0.85rem, 1.2vw, 1.1rem)" }}>
             Implatec — Controle de Refugo
           </p>
           <h1 className="font-black text-white capitalize leading-none mt-1"
             style={{ fontSize: "clamp(2rem, 3vw, 2.8rem)" }}>
-            {MESES_NOMES[mesAtual - 1]} <span style={{ color: "rgba(255,255,255,0.2)" }}>{anoAtual}</span>
+            {MESES_NOMES[mesAtual - 1]} <span style={{ color: "rgba(255,255,255,0.35)" }}>{anoAtual}</span>
           </h1>
         </div>
         <RelogioTV />
@@ -226,20 +232,20 @@ function SlideDashboard() {
 
         <div className="flex flex-col items-center gap-3 flex-shrink-0">
           <span className="uppercase tracking-widest font-semibold"
-            style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.85rem, 1.2vw, 1rem)" }}>
+            style={{ color: "rgba(255,255,255,0.5)", fontSize: "clamp(0.85rem, 1.2vw, 1rem)" }}>
             % Refugo — {MESES_NOMES[mesAtual - 1]}
           </span>
           <span className="font-black font-mono tabular-nums leading-none"
             style={{
               color: p.hero,
               fontSize: "clamp(6rem, 15vw, 12rem)",
-              textShadow: `0 0 50px ${p.hero}33`,
+              textShadow: `0 0 60px ${p.hero}55`,
               lineHeight: 1,
             }}>
             {temDados ? `${pctAnimado.toFixed(1)}%` : "—"}
           </span>
           <div className="flex items-center gap-2 px-5 py-2 rounded-lg"
-            style={{ background: "rgba(0,0,0,0.5)", border: `1px solid ${p.hero}33` }}>
+            style={{ background: "rgba(0,0,0,0.4)", border: `1px solid ${p.hero}55` }}>
             <StatusIcon style={{ width: 16, height: 16, color: p.hero }} />
             <span className="font-bold tracking-wider"
               style={{ color: p.hero, fontSize: "clamp(0.9rem, 1.3vw, 1.1rem)" }}>
@@ -247,16 +253,16 @@ function SlideDashboard() {
             </span>
           </div>
           <p className="font-semibold"
-            style={{ color: "rgba(255,255,255,0.25)", fontSize: "clamp(0.75rem, 1.1vw, 0.95rem)" }}>
+            style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.75rem, 1.1vw, 0.95rem)" }}>
             Meta: até {metaRefugo}% &nbsp;|&nbsp; {diasRegistrados} dia{diasRegistrados !== 1 ? "s" : ""}
           </p>
         </div>
 
         <div className="flex flex-col gap-4" style={{ minWidth: 280 }}>
           <div className="rounded-2xl px-8 py-5"
-            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+            style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)" }}>
             <p className="uppercase tracking-widest font-semibold"
-              style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.75rem, 1.1vw, 0.9rem)" }}>
+              style={{ color: "rgba(255,255,255,0.5)", fontSize: "clamp(0.75rem, 1.1vw, 0.9rem)" }}>
               Produção Total
             </p>
             <p className="font-black font-mono tabular-nums text-white leading-none mt-1"
@@ -266,9 +272,9 @@ function SlideDashboard() {
           </div>
 
           <div className="rounded-2xl px-8 py-5"
-            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+            style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)" }}>
             <p className="uppercase tracking-widest font-semibold"
-              style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.75rem, 1.1vw, 0.9rem)" }}>
+              style={{ color: "rgba(255,255,255,0.5)", fontSize: "clamp(0.75rem, 1.1vw, 0.9rem)" }}>
               Total Refugo
             </p>
             <p className="font-black font-mono tabular-nums leading-none mt-1"
@@ -279,24 +285,24 @@ function SlideDashboard() {
 
           {temPrevio && (
             <div className="rounded-2xl px-8 py-4"
-              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+              style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)" }}>
               <div className="flex items-center justify-between">
                 <div className="text-center flex-1">
                   <p className="uppercase tracking-widest font-semibold"
-                    style={{ color: "rgba(255,255,255,0.25)", fontSize: "clamp(0.6rem, 0.9vw, 0.75rem)" }}>
+                    style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.6rem, 0.9vw, 0.75rem)" }}>
                     {MESES_NOMES[mesPrevio! - 1]}
                   </p>
                   <p className="font-bold font-mono tabular-nums leading-none mt-1"
-                    style={{ color: "rgba(255,255,255,0.6)", fontSize: "clamp(2rem, 3.5vw, 3rem)" }}>
+                    style={{ color: "rgba(255,255,255,0.7)", fontSize: "clamp(2rem, 3.5vw, 3rem)" }}>
                     {pctPrevio.toFixed(1)}%
                   </p>
                 </div>
-                <div style={{ color: "rgba(255,255,255,0.15)", fontSize: "clamp(1.6rem, 3vw, 2.5rem)", padding: "0 12px" }}>
+                <div style={{ color: "rgba(255,255,255,0.25)", fontSize: "clamp(1.6rem, 3vw, 2.5rem)", padding: "0 12px" }}>
                   →
                 </div>
                 <div className="text-center flex-1">
                   <p className="uppercase tracking-widest font-semibold"
-                    style={{ color: "rgba(255,255,255,0.25)", fontSize: "clamp(0.6rem, 0.9vw, 0.75rem)" }}>
+                    style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.6rem, 0.9vw, 0.75rem)" }}>
                     {MESES_NOMES[mesAtual - 1]}
                   </p>
                   <p className="font-bold font-mono tabular-nums leading-none mt-1"
@@ -323,7 +329,7 @@ function SlideDashboard() {
 
       <div style={{
         height: 4,
-        background: `linear-gradient(90deg, ${p.faixa}, ${p.faixa}88, transparent)`,
+        background: `linear-gradient(90deg, ${p.faixa}, ${p.faixa}AA, transparent)`,
       }} />
     </div>
   );
@@ -376,26 +382,26 @@ function SlideClima({ dadosClima }: SlideClimaProps) {
 
   if (erro) {
     return (
-      <div className="flex flex-col h-full items-center justify-center" style={{ background: "linear-gradient(135deg, #0f172a, #1e293b)" }}>
+      <div className="flex flex-col h-full items-center justify-center" style={{ background: "linear-gradient(135deg, #1a1a4e, #283593)" }}>
         <div className="text-center">
-          <Cloud style={{ width: 64, height: 64, color: "rgba(255,255,255,0.2)", margin: "0 auto 16px" }} />
-          <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(1.5rem, 2.5vw, 2rem)" }}>Indisponível</p>
+          <Cloud style={{ width: 64, height: 64, color: "rgba(255,255,255,0.3)", margin: "0 auto 16px" }} />
+          <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "clamp(1.5rem, 2.5vw, 2rem)" }}>Indisponível</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden" style={{ background: "linear-gradient(135deg, #0c1445 0%, #1a237e 40%, #283593 100%)" }}>
+    <div className="flex flex-col h-full overflow-hidden" style={{ background: "linear-gradient(135deg, #1a1a4e 0%, #283593 40%, #3f51b5 100%)" }}>
 
       <div className="absolute inset-0 pointer-events-none" style={{
-        background: "radial-gradient(ellipse 80% 50% at 50% 100%, rgba(100,150,255,0.1), transparent)",
+        background: "radial-gradient(ellipse 80% 50% at 50% 100%, rgba(150,200,255,0.15), transparent)",
       }} />
 
       <div className="relative z-10 flex items-start justify-between px-10 pt-6">
         <div>
           <p className="uppercase tracking-widest font-bold"
-            style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.85rem, 1.2vw, 1.1rem)" }}>
+            style={{ color: "rgba(255,255,255,0.6)", fontSize: "clamp(0.85rem, 1.2vw, 1.1rem)" }}>
             Implatec — Clima
           </p>
           <h2 className="font-black text-white capitalize leading-none mt-1"
@@ -444,9 +450,9 @@ function SlideClima({ dadosClima }: SlideClimaProps) {
 
           <div className="flex flex-col gap-4">
             <div className="rounded-2xl px-6 py-4"
-              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.12)" }}>
               <p className="uppercase tracking-widest font-semibold"
-                style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.75rem, 1.1vw, 0.9rem)" }}>
+                style={{ color: "rgba(255,255,255,0.5)", fontSize: "clamp(0.75rem, 1.1vw, 0.9rem)" }}>
                 Previsão para os próximos dias
               </p>
             </div>
@@ -454,9 +460,9 @@ function SlideClima({ dadosClima }: SlideClimaProps) {
             <div className="grid grid-cols-3 gap-4">
               {dados.previsao.map((dia, i) => (
                 <div key={dia.data} className="rounded-2xl px-6 py-5 text-center"
-                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.12)" }}>
                   <p className="font-bold capitalize"
-                    style={{ color: "rgba(255,255,255,0.5)", fontSize: "clamp(1rem, 1.5vw, 1.3rem)" }}>
+                    style={{ color: "rgba(255,255,255,0.65)", fontSize: "clamp(1rem, 1.5vw, 1.3rem)" }}>
                     {i === 0 ? "Amanhã" : new Date(dia.data + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", "")}
                   </p>
                   <div style={{ fontSize: "clamp(3rem, 5vw, 4.5rem)", margin: "8px 0" }}>
@@ -468,12 +474,12 @@ function SlideClima({ dadosClima }: SlideClimaProps) {
                       {Math.round(dia.tempMax)}°
                     </span>
                     <span className="font-semibold font-mono tabular-nums"
-                      style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(1.4rem, 2.5vw, 2rem)" }}>
+                      style={{ color: "rgba(255,255,255,0.45)", fontSize: "clamp(1.4rem, 2.5vw, 2rem)" }}>
                       {Math.round(dia.tempMin)}°
                     </span>
                   </div>
                   <p className="font-medium mt-1"
-                    style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.8rem, 1.2vw, 1rem)" }}>
+                    style={{ color: "rgba(255,255,255,0.55)", fontSize: "clamp(0.8rem, 1.2vw, 1rem)" }}>
                     {descricaoTempo(dia.codigo)}
                   </p>
                 </div>
@@ -529,27 +535,27 @@ function SlideAniversariantes() {
   const totalAmbos = nascimento.length + tempoCasa.length;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden" style={{ background: "linear-gradient(135deg, #0f0a1a 0%, #1a0a2e 30%, #2d1b4e 60%, #0f172a 100%)" }}>
+    <div className="flex flex-col h-full overflow-hidden" style={{ background: "linear-gradient(135deg, #1a1030 0%, #2d1b4e 30%, #4a2a7a 60%, #1a1a3e 100%)" }}>
 
       <div className="absolute inset-0 pointer-events-none" style={{
         background: `
-          radial-gradient(ellipse 50% 30% at 50% 0%, rgba(236,72,153,0.12), transparent),
-          radial-gradient(ellipse 40% 30% at 80% 80%, rgba(168,85,247,0.08), transparent),
-          radial-gradient(ellipse 30% 30% at 20% 70%, rgba(251,191,36,0.05), transparent)
+          radial-gradient(ellipse 50% 30% at 50% 0%, rgba(236,72,153,0.18), transparent),
+          radial-gradient(ellipse 40% 30% at 80% 80%, rgba(168,85,247,0.12), transparent),
+          radial-gradient(ellipse 30% 30% at 20% 70%, rgba(251,191,36,0.08), transparent)
         `,
       }} />
 
       <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">
-        <span style={{ position: "absolute", top: "8%", left: "5%", fontSize: "clamp(2rem, 4vw, 3.5rem)", opacity: 0.15, transform: "rotate(-15deg)" }}>🎉</span>
-        <span style={{ position: "absolute", top: "12%", right: "8%", fontSize: "clamp(2.5rem, 5vw, 4rem)", opacity: 0.12, transform: "rotate(20deg)" }}>🎈</span>
-        <span style={{ position: "absolute", bottom: "15%", left: "10%", fontSize: "clamp(1.8rem, 3.5vw, 3rem)", opacity: 0.1 }}>🎁</span>
-        <span style={{ position: "absolute", bottom: "20%", right: "5%", fontSize: "clamp(2rem, 4vw, 3.5rem)", opacity: 0.12, transform: "rotate(-10deg)" }}>🎂</span>
+        <span style={{ position: "absolute", top: "8%", left: "5%", fontSize: "clamp(2rem, 4vw, 3.5rem)", opacity: 0.25, transform: "rotate(-15deg)" }}>🎉</span>
+        <span style={{ position: "absolute", top: "12%", right: "8%", fontSize: "clamp(2.5rem, 5vw, 4rem)", opacity: 0.2, transform: "rotate(20deg)" }}>🎈</span>
+        <span style={{ position: "absolute", bottom: "15%", left: "10%", fontSize: "clamp(1.8rem, 3.5vw, 3rem)", opacity: 0.18 }}>🎁</span>
+        <span style={{ position: "absolute", bottom: "20%", right: "5%", fontSize: "clamp(2rem, 4vw, 3.5rem)", opacity: 0.2, transform: "rotate(-10deg)" }}>🎂</span>
       </div>
 
       <div className="relative z-10 flex items-start justify-between px-10 pt-6" style={{ flexShrink: 0 }}>
         <div>
           <p className="uppercase tracking-widest font-bold"
-            style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.85rem, 1.2vw, 1.1rem)" }}>
+            style={{ color: "rgba(255,255,255,0.6)", fontSize: "clamp(0.85rem, 1.2vw, 1.1rem)" }}>
             Implatec — Aniversariantes do Mês
           </p>
           <h2 className="font-black text-white capitalize leading-none mt-1"
@@ -590,8 +596,8 @@ function SlideAniversariantes() {
                 <div key={`n-${p.nome}`} className="rounded-2xl px-6 py-5 text-center flex-1"
                   style={{
                     minWidth: 280,
-                    background: "linear-gradient(135deg, rgba(236,72,153,0.12), rgba(236,72,153,0.04))",
-                    border: "1px solid rgba(236,72,153,0.2)",
+                    background: "linear-gradient(135deg, rgba(236,72,153,0.18), rgba(236,72,153,0.08))",
+                    border: "1px solid rgba(236,72,153,0.3)",
                   }}>
                   <p className="font-black text-white leading-tight"
                     style={{ fontSize: "clamp(1.5rem, 2.5vw, 2.2rem)" }}>
@@ -605,7 +611,7 @@ function SlideAniversariantes() {
                     PARABÉNS EM NOME DA EQUIPE IMPLATEC
                   </p>
                   <p className="font-medium mt-1"
-                    style={{ color: "rgba(255,255,255,0.35)", fontSize: "clamp(0.75rem, 1vw, 0.9rem)" }}>
+                    style={{ color: "rgba(255,255,255,0.5)", fontSize: "clamp(0.75rem, 1vw, 0.9rem)" }}>
                     {formatarDataCompleta(p.nascimento)}
                   </p>
                 </div>
@@ -635,8 +641,8 @@ function SlideAniversariantes() {
                   <div key={`t-${p.nome}`} className="rounded-2xl px-6 py-5 text-center flex-1"
                     style={{
                       minWidth: 280,
-                      background: "linear-gradient(135deg, rgba(251,191,36,0.12), rgba(251,191,36,0.04))",
-                      border: "1px solid rgba(251,191,36,0.2)",
+                      background: "linear-gradient(135deg, rgba(251,191,36,0.18), rgba(251,191,36,0.08))",
+                      border: "1px solid rgba(251,191,36,0.3)",
                     }}>
                     <p className="font-black text-white leading-tight"
                       style={{ fontSize: "clamp(1.5rem, 2.5vw, 2.2rem)" }}>
@@ -652,7 +658,7 @@ function SlideAniversariantes() {
                         : "AGRADECEMOS POR MAIS UM ANO JUNTO DA EQUIPE IMPLATEC"}
                     </p>
                     <p className="font-medium mt-1"
-                      style={{ color: "rgba(255,255,255,0.35)", fontSize: "clamp(0.75rem, 1vw, 0.9rem)" }}>
+                      style={{ color: "rgba(255,255,255,0.5)", fontSize: "clamp(0.75rem, 1vw, 0.9rem)" }}>
                       Admissão: {formatarDataCompleta(p.admissao)}
                     </p>
                   </div>
@@ -683,42 +689,67 @@ interface SlideImagemProps {
 }
 
 function SlideImagem({ urlPublica, titulo, legenda }: SlideImagemProps) {
+  const [carregada, setCarregada] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    setCarregada(false);
+    if (imgRef.current?.complete) {
+      setCarregada(true);
+    }
+  }, [urlPublica]);
+
   return (
     <div className="relative w-full h-full overflow-hidden" style={{ background: "#000" }}>
       <img
+        ref={imgRef}
         src={urlPublica}
         alt={titulo}
         className="absolute inset-0 w-full h-full"
-        style={{ objectFit: "cover", opacity: 0.88 }}
+        style={{
+          objectFit: "cover",
+          opacity: carregada ? 1 : 0,
+          transition: "opacity 0.4s ease",
+          willChange: "opacity",
+        }}
+        decoding="async"
+        onLoad={() => setCarregada(true)}
       />
 
+      {!carregada && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
+        </div>
+      )}
+
       <div className="absolute inset-0" style={{
-        background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.2) 45%, rgba(0,0,0,0.35) 100%)"
+        background: "linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.05) 50%, transparent 100%)"
       }} />
 
       <div className="absolute top-8 left-10">
         <p className="uppercase font-bold tracking-[0.3em]"
-          style={{ color: "rgba(255,255,255,0.5)", fontSize: "clamp(0.85rem, 1.2vw, 1.1rem)" }}>
+          style={{ color: "rgba(255,255,255,0.7)", fontSize: "clamp(0.85rem, 1.2vw, 1.1rem)" }}>
           Implatec Perfis Plásticos
         </p>
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 px-14 pb-14">
-        <div className="mb-5" style={{ width: 60, height: 4, borderRadius: 2, background: "white", opacity: 0.6 }} />
+        <div className="mb-5" style={{ width: 60, height: 4, borderRadius: 2, background: "white", opacity: 0.8 }} />
         <h2 className="font-black text-white"
           style={{
             fontSize: "clamp(2.5rem, 6vw, 5.5rem)",
             lineHeight: 1.05,
-            textShadow: "0 4px 32px rgba(0,0,0,0.9)",
+            textShadow: "0 2px 16px rgba(0,0,0,0.5)",
             letterSpacing: "-0.01em",
           }}>
           {titulo}
         </h2>
         {legenda && (
-          <p className="mt-4 font-semibold text-white/70"
+          <p className="mt-4 font-semibold"
             style={{
+              color: "rgba(255,255,255,0.85)",
               fontSize: "clamp(1.2rem, 2.5vw, 2.2rem)",
-              textShadow: "0 2px 16px rgba(0,0,0,0.8)",
+              textShadow: "0 1px 8px rgba(0,0,0,0.4)",
             }}>
             {legenda}
           </p>
@@ -760,9 +791,10 @@ export default function ModoTV({ tvState }: ModoTVProps) {
     };
   }, []);
 
-  const totalSlides = (temAniversariantes ? 3 : 2) + totalImagens;
+  const totalSlides = useMemo(() => (temAniversariantes ? 3 : 2) + totalImagens, [temAniversariantes, totalImagens]);
   const baseImagem = temAniversariantes ? 3 : 2;
   const indiceGlobal = tipoSlide === "dashboard" ? 0 : tipoSlide === "clima" ? 1 : tipoSlide === "aniversariantes" ? 2 : indiceImagem + baseImagem;
+  const dots = useMemo(() => Array.from({ length: totalSlides }), [totalSlides]);
 
   const barCor =
     tipoSlide === "dashboard" ? "linear-gradient(90deg,#1d4ed8,#60a5fa)" :
@@ -771,7 +803,7 @@ export default function ModoTV({ tvState }: ModoTVProps) {
     "linear-gradient(90deg,#16a34a,#4ade80)";
 
   return (
-    <div className="fixed inset-0 z-[9999] flex flex-col overflow-hidden" style={{ background: "#080C18" }}>
+    <div className="fixed inset-0 z-[9999] flex flex-col overflow-hidden" style={{ background: "#111827" }}>
 
       <div key={fadeKey} className="flex-1 relative" style={{ animation: "tvFadeIn 0.7s cubic-bezier(0.16,1,0.3,1)" }}>
         {tipoSlide === "dashboard" ? (
@@ -787,12 +819,12 @@ export default function ModoTV({ tvState }: ModoTVProps) {
         )}
       </div>
 
-      <div style={{ height: 3, background: "rgba(255,255,255,0.07)" }}>
+      <div style={{ height: 3, background: "rgba(255,255,255,0.12)" }}>
         <div style={{ height: "100%", width: `${progresso}%`, background: barCor, transition: "width 0.2s linear" }} />
       </div>
 
       <div className="flex items-center justify-center gap-2 py-3" style={{ background: "rgba(0,0,0,0.5)" }}>
-        {Array.from({ length: totalSlides }).map((_, i) => (
+        {dots.map((_, i) => (
           <div key={i} style={{
             width: i === indiceGlobal ? 28 : 8,
             height: 8,
@@ -819,8 +851,8 @@ export default function ModoTV({ tvState }: ModoTVProps) {
 
       <style>{`
         @keyframes tvFadeIn {
-          from { opacity: 0; transform: scale(1.015); }
-          to   { opacity: 1; transform: scale(1); }
+          from { opacity: 0; }
+          to   { opacity: 1; }
         }
       `}</style>
     </div>
