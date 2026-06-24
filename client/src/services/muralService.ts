@@ -126,17 +126,6 @@ export async function atualizarSlide(
   if (error) throw new Error(`[Mural] atualizarSlide: ${error.message}`);
 }
 
-/** Reordena todos os slides recebendo um array de IDs na nova ordem. */
-export async function reordenarSlides(ids: string[]): Promise<void> {
-  const updates = ids.map((id, index) =>
-    supabase.from("mural_slides").update({ ordem: index }).eq("id", id)
-  );
-  const results = await Promise.all(updates);
-  for (const { error } of results) {
-    if (error) throw new Error(`[Mural] reordenarSlides: ${error.message}`);
-  }
-}
-
 // ─── Exclusão ─────────────────────────────────────────────────────────────────
 
 /**
