@@ -11,7 +11,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useDashboard } from "@/contexts/DashboardContext";
 import { useTVMode } from "@/hooks/useTVMode";
-import { MESES_NOMES, aniversariantesDoMes } from "@/lib/initialData";
+import { MESES_NOMES, aniversariantesNascimentoDoMes, aniversariantesTempoCasaDoMes, anosDeCasa } from "@/lib/initialData";
 import { X, ChevronRight, TrendingDown, TrendingUp, AlertTriangle, CheckCircle2, Cloud, Thermometer, Droplets } from "lucide-react";
 import { buscarClima, descricaoTempo, iconeTempo, DadosClima } from "@/services/weatherService";
 
@@ -504,6 +504,12 @@ function formatarDataBR(dataStr: string): string {
   return `${dia}/${mes}`;
 }
 
+function formatarDataCompleta(dataStr: string): string {
+  const [dia, mes, ano] = dataStr.split("/");
+  const meses = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+  return `${parseInt(dia)} de ${meses[parseInt(mes) - 1]} de ${ano}`;
+}
+
 function SlideAniversariantes() {
   const [agora, setAgora] = useState(new Date());
   useEffect(() => {
@@ -512,24 +518,24 @@ function SlideAniversariantes() {
   }, []);
 
   const mesAtual = agora.getMonth() + 1;
-  const sorted = aniversariantesDoMes(mesAtual);
+  const nascimento = aniversariantesNascimentoDoMes(mesAtual);
+  const tempoCasa = aniversariantesTempoCasaDoMes(mesAtual);
 
   const hora = agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   const data = agora.toLocaleDateString("pt-BR", {
     weekday: "long", day: "2-digit", month: "long",
   });
 
-  const total = sorted.length;
-  const cols = total <= 2 ? total : total <= 4 ? 2 : 3;
+  const totalAmbos = nascimento.length + tempoCasa.length;
 
   return (
     <div className="flex flex-col h-full overflow-hidden" style={{ background: "linear-gradient(135deg, #0f0a1a 0%, #1a0a2e 30%, #2d1b4e 60%, #0f172a 100%)" }}>
 
       <div className="absolute inset-0 pointer-events-none" style={{
         background: `
-          radial-gradient(ellipse 50% 30% at 50% 0%, rgba(236,72,153,0.15), transparent),
-          radial-gradient(ellipse 40% 30% at 80% 80%, rgba(168,85,247,0.1), transparent),
-          radial-gradient(ellipse 30% 30% at 20% 70%, rgba(251,191,36,0.06), transparent)
+          radial-gradient(ellipse 50% 30% at 50% 0%, rgba(236,72,153,0.12), transparent),
+          radial-gradient(ellipse 40% 30% at 80% 80%, rgba(168,85,247,0.08), transparent),
+          radial-gradient(ellipse 30% 30% at 20% 70%, rgba(251,191,36,0.05), transparent)
         `,
       }} />
 
@@ -540,7 +546,7 @@ function SlideAniversariantes() {
         <span style={{ position: "absolute", bottom: "20%", right: "5%", fontSize: "clamp(2rem, 4vw, 3.5rem)", opacity: 0.12, transform: "rotate(-10deg)" }}>🎂</span>
       </div>
 
-      <div className="relative z-10 flex items-start justify-between px-10 pt-6">
+      <div className="relative z-10 flex items-start justify-between px-10 pt-6" style={{ flexShrink: 0 }}>
         <div>
           <p className="uppercase tracking-widest font-bold"
             style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.85rem, 1.2vw, 1.1rem)" }}>
@@ -563,68 +569,106 @@ function SlideAniversariantes() {
         </div>
       </div>
 
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-10 pb-6 gap-6">
-        <div className="flex items-center gap-3">
-          <span style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)", lineHeight: 1 }}>🎂</span>
-          <span className="font-black" style={{
-            fontSize: "clamp(1.6rem, 3vw, 2.5rem)",
-            background: "linear-gradient(135deg, #f9a8d4, #e879f9, #c084fc)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-          }}>
-            {total} aniversariante{total !== 1 ? "s" : ""}
-          </span>
-        </div>
+      <div className="relative z-10 flex-1 flex flex-col overflow-y-auto px-10 pb-6 gap-5 min-h-0">
 
-        <div className="grid gap-4 w-full" style={{
-          gridTemplateColumns: `repeat(${cols}, 1fr)`,
-          maxWidth: total <= 2 ? "800px" : "1200px",
-        }}>
-          {sorted.map((p, i) => {
-            const hue = (i * 60 + 330) % 360;
-            return (
-              <div key={p.nome} className="rounded-3xl px-6 py-7 text-center relative overflow-hidden"
-                style={{
-                  background: `linear-gradient(135deg, hsla(${hue}, 80%, 60%, 0.12), hsla(${hue}, 80%, 60%, 0.04))`,
-                  border: `1px solid hsla(${hue}, 80%, 70%, 0.2)`,
-                }}>
-                <div className="text-3xl mb-3">🎉</div>
-                <p className="font-black text-white leading-tight"
-                  style={{ fontSize: "clamp(1.4rem, 2.5vw, 2rem)" }}>
-                  {p.nome}
-                </p>
-                <div className="flex items-center justify-center gap-5 mt-4">
-                  <div className="flex flex-col items-center">
-                    <span className="uppercase tracking-widest font-semibold"
-                      style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.55rem, 0.8vw, 0.7rem)" }}>
-                      Nascimento
-                    </span>
-                    <span className="font-bold font-mono tabular-nums mt-1"
-                      style={{ color: `hsla(${hue}, 80%, 75%, 0.9)`, fontSize: "clamp(1.1rem, 1.8vw, 1.5rem)" }}>
-                      {formatarDataBR(p.nascimento)}
-                    </span>
-                  </div>
-                  <div style={{ width: 1, height: 36, background: "rgba(255,255,255,0.08)" }} />
-                  <div className="flex flex-col items-center">
-                    <span className="uppercase tracking-widest font-semibold"
-                      style={{ color: "rgba(255,255,255,0.3)", fontSize: "clamp(0.55rem, 0.8vw, 0.7rem)" }}>
-                      Admissão
-                    </span>
-                    <span className="font-bold font-mono tabular-nums mt-1"
-                      style={{ color: "rgba(255,255,255,0.6)", fontSize: "clamp(1.1rem, 1.8vw, 1.5rem)" }}>
-                      {p.admissao}
-                    </span>
-                  </div>
+        {/* ─── Seção: Aniversário de Nascimento ────────────────────────────── */}
+        {nascimento.length > 0 && (
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl">🎂</span>
+              <span className="font-black" style={{
+                fontSize: "clamp(1.2rem, 2vw, 1.8rem)",
+                background: "linear-gradient(135deg, #f9a8d4, #e879f9, #c084fc)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}>
+                Aniversário de Nascimento
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-4">
+              {nascimento.map((p) => (
+                <div key={`n-${p.nome}`} className="rounded-2xl px-6 py-5 text-center flex-1"
+                  style={{
+                    minWidth: 280,
+                    background: "linear-gradient(135deg, rgba(236,72,153,0.12), rgba(236,72,153,0.04))",
+                    border: "1px solid rgba(236,72,153,0.2)",
+                  }}>
+                  <p className="font-black text-white leading-tight"
+                    style={{ fontSize: "clamp(1.5rem, 2.5vw, 2.2rem)" }}>
+                    {p.nome}
+                  </p>
+                  <p className="font-semibold mt-3" style={{
+                    fontSize: "clamp(0.85rem, 1.3vw, 1.1rem)",
+                    color: "#f9a8d4",
+                    lineHeight: 1.4,
+                  }}>
+                    PARABÉNS EM NOME DA EQUIPE IMPLATEC
+                  </p>
+                  <p className="font-medium mt-1"
+                    style={{ color: "rgba(255,255,255,0.35)", fontSize: "clamp(0.75rem, 1vw, 0.9rem)" }}>
+                    {formatarDataCompleta(p.nascimento)}
+                  </p>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ─── Seção: Tempo de Casa ──────────────────────────────────────── */}
+        {tempoCasa.length > 0 && (
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl">🏆</span>
+              <span className="font-black" style={{
+                fontSize: "clamp(1.2rem, 2vw, 1.8rem)",
+                background: "linear-gradient(135deg, #fbbf24, #f59e0b, #d97706)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}>
+                Tempo de Casa
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-4">
+              {tempoCasa.map((p) => {
+                const anos = anosDeCasa(p.admissao);
+                return (
+                  <div key={`t-${p.nome}`} className="rounded-2xl px-6 py-5 text-center flex-1"
+                    style={{
+                      minWidth: 280,
+                      background: "linear-gradient(135deg, rgba(251,191,36,0.12), rgba(251,191,36,0.04))",
+                      border: "1px solid rgba(251,191,36,0.2)",
+                    }}>
+                    <p className="font-black text-white leading-tight"
+                      style={{ fontSize: "clamp(1.5rem, 2.5vw, 2.2rem)" }}>
+                      {p.nome}
+                    </p>
+                    <p className="font-semibold mt-3" style={{
+                      fontSize: "clamp(0.8rem, 1.2vw, 1rem)",
+                      color: "#fbbf24",
+                      lineHeight: 1.4,
+                    }}>
+                      {anos !== null
+                        ? `AGRADECEMOS POR MAIS UM ANO JUNTO DA EQUIPE IMPLATEC — ${anos} ${anos === 1 ? "ANO" : "ANOS"} DE DEDICAÇÃO`
+                        : "AGRADECEMOS POR MAIS UM ANO JUNTO DA EQUIPE IMPLATEC"}
+                    </p>
+                    <p className="font-medium mt-1"
+                      style={{ color: "rgba(255,255,255,0.35)", fontSize: "clamp(0.75rem, 1vw, 0.9rem)" }}>
+                      Admissão: {formatarDataCompleta(p.admissao)}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
       </div>
 
       <div style={{
-        height: 3,
-        background: "linear-gradient(90deg, #ec4899, #a855f7, #6366f1, transparent)",
+        height: 3, flexShrink: 0,
+        background: totalAmbos > 0
+          ? "linear-gradient(90deg, #ec4899, #a855f7, #fbbf24, transparent)"
+          : "linear-gradient(90deg, #ec4899, #a855f7, transparent)",
       }} />
     </div>
   );

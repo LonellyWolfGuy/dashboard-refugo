@@ -72,10 +72,35 @@ export function mesDoNascimento(dataStr: string): number {
   return parseInt(dataStr.split("/")[1], 10);
 }
 
-export function aniversariantesDoMes(mes: number): Aniversariante[] {
+export function mesDaAdmissao(dataStr: string): number | null {
+  if (dataStr === "—") return null;
+  return parseInt(dataStr.split("/")[1], 10);
+}
+
+export function anosDeCasa(dataStr: string): number | null {
+  if (dataStr === "—") return null;
+  const ano = parseInt(dataStr.split("/")[2], 10);
+  return new Date().getFullYear() - ano;
+}
+
+export function aniversariantesNascimentoDoMes(mes: number): Aniversariante[] {
   return [...ANIVERSARIANTES]
     .filter(p => mesDoNascimento(p.nascimento) === mes)
     .sort((a, b) => parseInt(a.nascimento.split("/")[0], 10) - parseInt(b.nascimento.split("/")[0], 10));
+}
+
+export function aniversariantesTempoCasaDoMes(mes: number): Aniversariante[] {
+  return [...ANIVERSARIANTES]
+    .filter(p => {
+      const m = mesDaAdmissao(p.admissao);
+      return m !== null && m === mes;
+    })
+    .sort((a, b) => parseInt(a.admissao.split("/")[0], 10) - parseInt(b.admissao.split("/")[0], 10));
+}
+
+export function temAniversariantesNoMes(mes: number): boolean {
+  return aniversariantesNascimentoDoMes(mes).length > 0 ||
+         aniversariantesTempoCasaDoMes(mes).length > 0;
 }
 
 // Nota: DADOS_INICIAIS foi removido na V2 para privilegiar a integridade dos dados no Supabase.

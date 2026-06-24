@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { listarSlides, MuralSlide } from "@/services/muralService";
 import { buscarClima, DadosClima } from "@/services/weatherService";
-import { aniversariantesDoMes } from "@/lib/initialData";
+import { temAniversariantesNoMes } from "@/lib/initialData";
 
 export type TipoSlide = "dashboard" | "clima" | "aniversariantes" | "imagem";
 
@@ -69,7 +69,7 @@ export function useTVMode(): TVModeState {
       setIndiceImagem(0);
     } else if (tipoAtualRef.current === "clima") {
       const mes = new Date().getMonth() + 1;
-      const tem = aniversariantesDoMes(mes).length > 0;
+      const tem = temAniversariantesNoMes(mes);
       setTemAniversariantes(tem);
       if (tem) {
         tipoAtualRef.current = "aniversariantes";
@@ -151,7 +151,7 @@ export function useTVMode(): TVModeState {
       .catch(() => {});
 
     const mesAtual = new Date().getMonth() + 1;
-    setTemAniversariantes(aniversariantesDoMes(mesAtual).length > 0);
+    setTemAniversariantes(temAniversariantesNoMes(mesAtual));
 
     tipoAtualRef.current  = "dashboard";
     indiceImagemRef.current = 0;
