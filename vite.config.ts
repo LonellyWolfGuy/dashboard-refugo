@@ -56,6 +56,16 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom"],
+          charts: ["recharts"],
+          pdf: ["jspdf", "html2canvas"],
+        },
+      },
+    },
   },
   server: {
     port: 3000,
