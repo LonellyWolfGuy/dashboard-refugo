@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { listarSlides, getUrlOtimizada, MuralSlide } from "@/services/muralService";
 import { buscarClima, DadosClima } from "@/services/weatherService";
 import { temAniversariantesNoMes } from "@/lib/initialData";
+import { supabase } from "@/lib/supabase";
 
 export type TipoSlide = "dashboard" | "clima" | "aniversariantes" | "imagem";
 
@@ -69,6 +70,8 @@ export function useTVMode(): TVModeState {
   const preloadedRef     = useRef<Set<string>>(new Set());
   const abortRef         = useRef<AbortController | null>(null);
   const configRef        = useRef(getConfig());
+  const wakeLockRef      = useRef<WakeLockSentinel | null>(null);
+  const sessionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   imagensRef.current = imagens;
 
@@ -220,6 +223,28 @@ export function useTVMode(): TVModeState {
         await document.documentElement.requestFullscreen();
       }
     } catch {}
+
+    try {
+      if ("wakeLock" in navigator) {
+        wakeLockRef.current = await navigator.wakeLock.request("screen");
+        wakeLockRef.current.addEventListener("release", async () => {
+          if (document.fullscreenElement) {
+            try {
+              wakeLockRef.current = await navigator.wakeLock.request("screen");
+            } catch {}
+          }
+        });
+      }
+    } catch {}
+
+    sessionIntervalRef.current = setInterval(async () => {
+      try {
+        const { error } = await supabase.auth.refreshSession();
+        if (error) console.warn("[TV] Erro ao renovar sessão:", error.message);
+      } catch (e) {
+        console.warn("[TV] Falha na renovação de sessão:", e);
+      }
+    }, 25 * 60 * 1000);
   }, []);
 
   const sair = useCallback(() => {
@@ -235,6 +260,16 @@ export function useTVMode(): TVModeState {
     setImagens([]);
     imagensRef.current = [];
     preloadedRef.current.clear();
+
+    if (wakeLockRef.current) {
+      try { wakeLockRef.current.release(); } catch {}
+      wakeLockRef.current = null;
+    }
+
+    if (sessionIntervalRef.current) {
+      clearInterval(sessionIntervalRef.current);
+      sessionIntervalRef.current = null;
+    }
 
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(() => {});
@@ -261,12 +296,29 @@ export function useTVMode(): TVModeState {
       if (!document.fullscreenElement && isTVMode) sair();
     };
 
+    const onVisibilityChange = async () => {
+      if (document.visibilityState === "visible") {
+        if (!document.fullscreenElement) {
+          try {
+            await document.documentElement.requestFullscreen();
+          } catch {}
+        }
+        if ("wakeLock" in navigator && !wakeLockRef.current) {
+          try {
+            wakeLockRef.current = await navigator.wakeLock.request("screen");
+          } catch {}
+        }
+      }
+    };
+
     document.addEventListener("keydown", onKey);
     document.addEventListener("fullscreenchange", onFullscreenChange);
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("fullscreenchange", onFullscreenChange);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [isTVMode, sair]);
 
