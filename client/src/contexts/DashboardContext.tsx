@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DailyRecord, MonthData, META_REFUGO_PERCENT } from "@/lib/initialData";
 import * as refugoService from "@/services/refugoService";
@@ -57,7 +57,8 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     staleTime: Infinity,
   });
 
-  const mConfig = config || { metaRefugo: META_REFUGO_PERCENT, motivos: [] };
+  const defaultConfig = useMemo(() => ({ metaRefugo: META_REFUGO_PERCENT, motivos: [] }), []);
+  const mConfig = config || defaultConfig;
   const meses = React.useMemo(() => montarMeses(registros, anoAtual), [registros, anoAtual]);
   const carregando = carregandoRegistros || carregandoConfig;
 
@@ -65,20 +66,25 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const addMutation = useMutation({
     mutationFn: ({ mes, ano, req }: any) => refugoService.inserirRegistro(mes, ano, req),
     onMutate: async ({ mes, ano, req }: any) => {
-      await queryClient.cancelQueries({ queryKey: ["registros", anoAtual] });
-      const previous = queryClient.getQueryData<DailyRecord[]>(["registros", anoAtual]);
+      await queryClient.cancelQueries({ queryKey: ["registros", ano] });
+      const previous = queryClient.getQueryData<DailyRecord[]>(["registros", ano]);
       if (previous) {
         const tempRecord = { ...req, id: `temp-${Date.now()}` };
-        queryClient.setQueryData<DailyRecord[]>(["registros", anoAtual], old => [...(old || []), tempRecord]);
+        queryClient.setQueryData<DailyRecord[]>(["registros", ano], old => [...(old || []), tempRecord]);
       }
       return { previous };
     },
     onError: (err, variables, context) => {
       if (context?.previous) {
-        queryClient.setQueryData(["registros", anoAtual], context.previous);
+        queryClient.setQueryData(["registros", variables.ano], context.previous);
       }
     },
-    onSettled: () => { queryClient.invalidateQueries({ queryKey: ["registros", anoAtual] }) },
+    onSettled: (_data, _error, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["registros", variables.ano] });
+      if (variables.ano !== anoAtual) {
+        queryClient.invalidateQueries({ queryKey: ["registros", anoAtual] });
+      }
+    },
   });
 
   const editMutation = useMutation({
@@ -154,7 +160,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   }, [mConfig.motivos, configMutation]);
 
   const salvarTudo = useCallback(async () => {
-    await queryClient.refetchQueries({ queryKey: ["registros", anoAtual] });
+    await queryClient.invalidateQueries({ queryKey: ["registros", anoAtual] });
   }, [queryClient, anoAtual]);
 
   const getMesData = useCallback((mes: number): MonthData =>
@@ -185,13 +191,20 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
 
   const getTotaisAnuais = useCallback(() => totaisAnuaisMemo, [totaisAnuaisMemo]);
 
+  const providerValue = useMemo(() => ({
+    meses, mesAtual, anoAtual, metaRefugo: mConfig.metaRefugo, motivos: mConfig.motivos, carregando,
+    setMesAtual, setAnoAtual, adicionarRegistro, editarRegistro, excluirRegistro,
+    setMetaRefugo, adicionarMotivo, removerMotivo,
+    getMesData, getTotaisMes, getTotaisAnuais, salvarTudo,
+  }), [
+    meses, mesAtual, anoAtual, mConfig.metaRefugo, mConfig.motivos, carregando,
+    setMesAtual, setAnoAtual, adicionarRegistro, editarRegistro, excluirRegistro,
+    setMetaRefugo, adicionarMotivo, removerMotivo,
+    getMesData, getTotaisMes, getTotaisAnuais, salvarTudo,
+  ]);
+
   return (
-    <DashboardContext.Provider value={{
-      meses, mesAtual, anoAtual, metaRefugo: mConfig.metaRefugo, motivos: mConfig.motivos, carregando,
-      setMesAtual, setAnoAtual, adicionarRegistro, editarRegistro, excluirRegistro,
-      setMetaRefugo, adicionarMotivo, removerMotivo,
-      getMesData, getTotaisMes, getTotaisAnuais, salvarTudo,
-    }}>
+    <DashboardContext.Provider value={providerValue}>
       {children}
     </DashboardContext.Provider>
   );

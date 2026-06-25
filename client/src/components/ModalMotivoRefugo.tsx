@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { RefugoMotivo } from "@/lib/initialData";
 import { useDashboard } from "@/contexts/DashboardContext";
+import { ordenarMotivos } from "@/services/refugoService";
 import { X, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -10,13 +11,6 @@ interface ModalMotivoRefugoProps {
   motivos: RefugoMotivo[] | undefined;
   totalRefugo: number;
   onSave: (motivos: RefugoMotivo[]) => void;
-}
-
-// Ordena: alfabético, "Outros" sempre por último
-function ordenarMotivos(motivos: string[]): string[] {
-  const outros = motivos.filter(m => m.toLowerCase() === "outros");
-  const resto  = motivos.filter(m => m.toLowerCase() !== "outros").sort((a, b) => a.localeCompare(b, "pt-BR"));
-  return [...resto, ...outros];
 }
 
 export default function ModalMotivoRefugo({
@@ -44,10 +38,10 @@ export default function ModalMotivoRefugo({
 
   // Motivos disponíveis no select: ordenados (alfabético + "Outros" por último)
   // Exclui motivos já adicionados neste registro para evitar duplicatas
-  const jaAdicionados = new Set(motivosList.map(m => m.motivo));
-  const motivosDisponiveis = ordenarMotivos(motivosDoContexto).filter(
-    m => !jaAdicionados.has(m)
-  );
+  const motivosDisponiveis = useMemo(() => {
+    const jaAdicionados = new Set(motivosList.map(m => m.motivo));
+    return ordenarMotivos(motivosDoContexto).filter(m => !jaAdicionados.has(m));
+  }, [motivosDoContexto, motivosList]);
 
   function adicionarMotivo() {
     if (!novoMotivo || !novaQuantidade) {

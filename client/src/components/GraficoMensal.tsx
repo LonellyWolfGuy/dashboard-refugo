@@ -1,6 +1,7 @@
 // Design: Clean Manufacturing Dashboard
 // Gráfico de barras empilhadas (produção + refugo) com linha de meta de % refugo
 
+import { useMemo } from "react";
 import { useDashboard } from "@/contexts/DashboardContext";
 import { MESES_NOMES } from "@/lib/initialData";
 import {
@@ -17,8 +18,8 @@ import {
 } from "recharts";
 
 function formatData(data: string): string {
-  const d = new Date(data + "T00:00:00");
-  return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}`;
+  const [ano, mes, dia] = data.split("-");
+  return `${dia}/${mes}`;
 }
 
 interface CustomTooltipProps {
@@ -72,7 +73,7 @@ export default function GraficoMensal() {
   const { mesAtual, anoAtual, getMesData, metaRefugo } = useDashboard();
   const mesData = getMesData(mesAtual);
 
-  const dados = mesData.registros.map(r => {
+  const dados = useMemo(() => mesData.registros.map(r => {
     const total = r.producao + r.refugo;
     const pct = total > 0 ? (r.refugo / total) * 100 : 0;
     return {
@@ -81,7 +82,11 @@ export default function GraficoMensal() {
       "Refugo": parseFloat(r.refugo.toFixed(2)),
       "% Refugo": parseFloat(pct.toFixed(2)),
     };
-  });
+  }), [mesData.registros]);
+
+  const yDomain = useMemo(() => {
+    return [0, Math.max(100, ...dados.map(d => d["% Refugo"]))];
+  }, [dados]);
 
   if (dados.length === 0) {
     return (
@@ -137,7 +142,7 @@ export default function GraficoMensal() {
             axisLine={false}
             tickLine={false}
             tickFormatter={v => `${v}%`}
-            domain={[0, Math.max(100, ...dados.map(d => d["% Refugo"]) )]}
+            domain={yDomain}
           />
           <Tooltip content={<CustomTooltip />} />
           <Legend

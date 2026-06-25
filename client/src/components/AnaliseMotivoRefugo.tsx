@@ -1,4 +1,6 @@
+import { useMemo } from "react";
 import { useDashboard } from "@/contexts/DashboardContext";
+import { ordenarMotivos } from "@/services/refugoService";
 
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -7,33 +9,14 @@ import {
 
 // Paleta de cores — expande automaticamente para qualquer número de motivos
 const PALETA = [
-  "#FF2D2D", // vermelho vivo
-  "#FF7A00", // laranja
-  "#FFD600", // amarelo
-  "#00C853", // verde
-  "#00B8D4", // ciano
-  "#2979FF", // azul
-  "#D500F9", // roxo
-  "#FF1493", // rosa choque
-  "#00E676", // verde neon
-  "#FF6D00", // laranja escuro
-  "#1DE9B6", // turquesa
-  "#AA00FF", // violeta
-  "#F50057", // vermelho rosa
-  "#00B0FF", // azul claro
-  "#76FF03", // lima
-  "#FF4081", // rosa
+  "#FF2D2D", "#FF7A00", "#FFD600", "#00C853",
+  "#00B8D4", "#2979FF", "#D500F9", "#FF1493",
+  "#00E676", "#FF6D00", "#1DE9B6", "#AA00FF",
+  "#F50057", "#00B0FF", "#76FF03", "#FF4081",
 ];
 
 function getCor(index: number): string {
   return PALETA[index % PALETA.length];
-}
-
-// Ordena motivos: alfabético, "Outros" sempre por último
-function ordenarMotivos(motivos: string[]): string[] {
-  const outros = motivos.filter(m => m.toLowerCase() === "outros");
-  const resto  = motivos.filter(m => m.toLowerCase() !== "outros").sort((a, b) => a.localeCompare("pt-BR") || a.localeCompare(b));
-  return [...resto, ...outros];
 }
 
 export default function AnaliseMotivoRefugo() {
@@ -60,22 +43,22 @@ export default function AnaliseMotivoRefugo() {
   const coresMap: Record<string, string> = {};
   todosMotivos.forEach((m, i) => { coresMap[m] = getCor(i); });
 
-  // 5. Dados para gráfico de barras — apenas motivos com quantidade > 0
-  const dadosBarras = todosMotivos
-    .filter(m => (totais[m] ?? 0) > 0)
-    .map(m => ({
-      motivo: m.length > 20 ? m.substring(0, 17) + "..." : m,
-      motivoCompleto: m,
-      quantidade: totais[m],
-      cor: coresMap[m],
-    }));
+  // 5. Dados para ambos os gráficos — computado uma única vez
+  const dadosGraficos = useMemo(() => {
+    return todosMotivos
+      .filter(m => (totais[m] ?? 0) > 0)
+      .map(m => ({
+        motivo: m.length > 20 ? m.substring(0, 17) + "..." : m,
+        motivoCompleto: m,
+        quantidade: totais[m],
+        cor: coresMap[m],
+      }));
+  }, [todosMotivos, totais, coresMap]);
 
-  // 6. Dados para pizza — todos com quantidade > 0
-  const dadosPizza = todosMotivos
-    .filter(m => (totais[m] ?? 0) > 0)
-    .map(m => ({ name: m, value: totais[m], cor: coresMap[m] }));
+  const dadosBarras = dadosGraficos;
+  const dadosPizza = useMemo(() => dadosGraficos.map(d => ({ name: d.motivoCompleto, value: d.quantidade, cor: d.cor })), [dadosGraficos]);
 
-  const totalGeral = Object.values(totais).reduce((s, v) => s + v, 0);
+  const totalGeral = useMemo(() => Object.values(totais).reduce((s, v) => s + v, 0), [totais]);
 
   if (dadosBarras.length === 0) {
     return (

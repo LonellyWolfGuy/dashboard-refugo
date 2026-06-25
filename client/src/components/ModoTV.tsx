@@ -15,6 +15,17 @@ import { MESES_NOMES, aniversariantesNascimentoDoMes, aniversariantesTempoCasaDo
 import { X, ChevronRight, AlertTriangle, CheckCircle2, Cloud } from "lucide-react";
 import { buscarClima, descricaoTempo, iconeTempo, DadosClima } from "@/services/weatherService";
 
+// ─── Hook compartilhado de relógio ────────────────────────────────────────────
+
+function useClock() {
+  const [agora, setAgora] = useState(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setAgora(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return agora;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatNum(n: number): string {
@@ -116,11 +127,7 @@ function ArcProgress({ percent, meta, cor, corMeta, size = 280 }: ArcProgressPro
 // ─── Sub-componente: Relógio ──────────────────────────────────────────────────
 
 function RelogioTV() {
-  const [agora, setAgora] = useState(new Date());
-  useEffect(() => {
-    const t = setInterval(() => setAgora(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
+  const agora = useClock();
 
   const hora = agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   const seg  = agora.toLocaleTimeString("pt-BR", { second: "2-digit" });
@@ -344,16 +351,11 @@ interface SlideClimaProps {
 function SlideClima({ dadosClima }: SlideClimaProps) {
   const [dados, setDados] = useState<DadosClima | null>(dadosClima);
   const [erro, setErro] = useState(false);
-  const [agora, setAgora] = useState(new Date());
+  const agora = useClock();
 
   useEffect(() => {
     if (dadosClima) setDados(dadosClima);
   }, [dadosClima]);
-
-  useEffect(() => {
-    const t = setInterval(() => setAgora(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
 
   useEffect(() => {
     if (!dados) {
@@ -517,11 +519,7 @@ function formatarDataCompleta(dataStr: string): string {
 }
 
 function SlideAniversariantes() {
-  const [agora, setAgora] = useState(new Date());
-  useEffect(() => {
-    const t = setInterval(() => setAgora(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
+  const agora = useClock();
 
   const mesAtual = agora.getMonth() + 1;
   const nascimento = aniversariantesNascimentoDoMes(mesAtual);

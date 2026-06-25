@@ -1,6 +1,7 @@
 // Design: Clean Manufacturing Dashboard
 // Gráfico de barras agrupadas mostrando % refugo por mês ao longo do ano
 
+import { useMemo } from "react";
 import { useDashboard } from "@/contexts/DashboardContext";
 import { MESES_ABREV } from "@/lib/initialData";
 import {
@@ -36,16 +37,16 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
 export default function GraficoAnual() {
   const { anoAtual, getTotaisMes, metaRefugo } = useDashboard();
 
-  const dados = MESES_ABREV.map((nome, idx) => {
+  const dados = useMemo(() => MESES_ABREV.map((nome, idx) => {
     const mes = idx + 1;
     const totais = getTotaisMes(mes);
     return {
       mes: nome,
       "% Refugo": totais.percentRefugo > 0 ? parseFloat(totais.percentRefugo.toFixed(2)) : 0,
     };
-  });
+  }), [getTotaisMes]);
 
-  const temDados = dados.some(d => d["% Refugo"] > 0);
+  const temDados = useMemo(() => dados.some(d => d["% Refugo"] > 0), [dados]);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-5">

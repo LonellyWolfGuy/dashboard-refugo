@@ -38,7 +38,11 @@ export function ThemeProvider({
     }
 
     if (switchable) {
-      localStorage.setItem("theme", theme);
+      if ("requestIdleCallback" in window) {
+        requestIdleCallback(() => localStorage.setItem("theme", theme));
+      } else {
+        localStorage.setItem("theme", theme);
+      }
     }
   }, [theme, switchable]);
 

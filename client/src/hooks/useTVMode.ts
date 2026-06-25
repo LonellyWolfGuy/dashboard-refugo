@@ -68,6 +68,7 @@ export function useTVMode(): TVModeState {
   const imagensRef       = useRef<MuralSlide[]>([]);
   const preloadedRef     = useRef<Set<string>>(new Set());
   const abortRef         = useRef<AbortController | null>(null);
+  const configRef        = useRef(getConfig());
 
   imagensRef.current = imagens;
 
@@ -165,10 +166,11 @@ export function useTVMode(): TVModeState {
     preloadedRef.current.clear();
     precarregarProximaImagem();
 
+    configRef.current = getConfig();
     const TICK_MS = 200;
 
     intervalRef.current = setInterval(() => {
-      const cfg = getConfig();
+      const cfg = configRef.current;
       const duracao =
         tipoAtualRef.current === "dashboard" ? cfg.segDashboard * 1000 :
         tipoAtualRef.current === "clima" ? SEG_CLIMA * 1000 :
@@ -246,14 +248,7 @@ export function useTVMode(): TVModeState {
       limparInterval();
     }
     return limparInterval;
-  }, [isTVMode, iniciarCiclo, limparInterval]);
-
-  useEffect(() => {
-    if (isTVMode) {
-      iniciarCiclo();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tipoSlide]);
+  }, [isTVMode, iniciarCiclo, limparInterval, tipoSlide]);
 
   useEffect(() => {
     if (!isTVMode) return;

@@ -14,9 +14,16 @@ export interface MuralSlide {
   created_at: string;
 }
 
+// ─── Cache de URLs otimizadas ─────────────────────────────────────────────────
+
+const urlCache = new Map<string, string>();
+
 // ─── Otimização de imagens ────────────────────────────────────────────────────
 
 export function getUrlOtimizada(storagePath: string): string {
+  const cached = urlCache.get(storagePath);
+  if (cached) return cached;
+
   const nomeArquivo = storagePath.replace(/^mural\//, "");
   const { data } = supabase.storage
     .from("mural")
@@ -28,6 +35,7 @@ export function getUrlOtimizada(storagePath: string): string {
         quality: 80,
       },
     });
+  urlCache.set(storagePath, data.publicUrl);
   return data.publicUrl;
 }
 

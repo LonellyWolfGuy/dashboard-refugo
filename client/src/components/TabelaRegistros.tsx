@@ -1,7 +1,7 @@
 // Design: Clean Manufacturing Dashboard
 // Tabela de lançamentos com suporte a qualquer data (passado, presente ou futuro)
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useDashboard } from "@/contexts/DashboardContext";
 import { MESES_NOMES } from "@/lib/initialData";
 import { DailyRecord, RefugoMotivo } from "@/lib/initialData";
@@ -21,8 +21,8 @@ import {
 } from "@/components/ui/alert-dialog";
 
 function formatData(data: string): string {
-  const d = new Date(data + "T00:00:00");
-  return d.toLocaleDateString("pt-BR");
+  const [ano, mes, dia] = data.split("-");
+  return `${dia}/${mes}/${ano}`;
 }
 
 function getPercentBadge(pct: number, meta: number): string {
@@ -68,10 +68,12 @@ export default function TabelaRegistros() {
   const [confirmExclusaoAberta, setConfirmExclusaoAberta] = useState(false);
   const [idParaExcluir, setIdParaExcluir] = useState<string | null>(null);
 
-  const registros = [...mesData.registros].sort((a, b) => {
-    const diff = new Date(a.data).getTime() - new Date(b.data).getTime();
-    return sortDir === "asc" ? diff : -diff;
-  });
+  const registros = useMemo(() => {
+    return [...mesData.registros].sort((a, b) => {
+      const diff = a.data.localeCompare(b.data);
+      return sortDir === "asc" ? diff : -diff;
+    });
+  }, [mesData.registros, sortDir]);
 
   // ── Aviso quando a data digitada pertence a outro mês ──────────────────────
   const novoMesAno = mesAnoDeData(novoData);
@@ -218,22 +220,28 @@ export default function TabelaRegistros() {
   }
 
   // ── Totais ─────────────────────────────────────────────────────────────────
-  const totalProducao = registros.reduce((s, r) => s + r.producao, 0);
-  const totalRefugo = registros.reduce((s, r) => s + r.refugo, 0);
-  const totalGeral = totalProducao + totalRefugo;
-  const percentTotal = totalGeral > 0 ? (totalRefugo / totalGeral) * 100 : 0;
+  const totais = useMemo(() => {
+    const totalProducao = registros.reduce((s, r) => s + r.producao, 0);
+    const totalRefugo = registros.reduce((s, r) => s + r.refugo, 0);
+    const totalGeral = totalProducao + totalRefugo;
+    return { totalProducao, totalRefugo, totalGeral, percentTotal: totalGeral > 0 ? (totalRefugo / totalGeral) * 100 : 0 };
+  }, [registros]);
 
   // Pré-cálculo da linha de novo
-  const novoProd = parseFloat(novoProducao || "0");
-  const novoRef = parseFloat(novoRefugo || "0");
-  const novoTotal = novoProd + novoRef;
-  const novoPct = novoTotal > 0 ? (novoRef / novoTotal) * 100 : 0;
+  const previsaoNovo = useMemo(() => {
+    const novoProd = parseFloat(novoProducao || "0");
+    const novoRef = parseFloat(novoRefugo || "0");
+    const novoTotal = novoProd + novoRef;
+    return { novoProd, novoRef, novoTotal, novoPct: novoTotal > 0 ? (novoRef / novoTotal) * 100 : 0 };
+  }, [novoProducao, novoRefugo]);
 
   // Pré-cálculo da linha em edição
-  const editProd = parseFloat(editState.producao || "0");
-  const editRef = parseFloat(editState.refugo || "0");
-  const editTotal = editProd + editRef;
-  const editPct = editTotal > 0 ? (editRef / editTotal) * 100 : 0;
+  const previsaoEdit = useMemo(() => {
+    const editProd = parseFloat(editState.producao || "0");
+    const editRef = parseFloat(editState.refugo || "0");
+    const editTotal = editProd + editRef;
+    return { editProd, editRef, editTotal, editPct: editTotal > 0 ? (editRef / editTotal) * 100 : 0 };
+  }, [editState.producao, editState.refugo]);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200">
@@ -325,11 +333,11 @@ export default function TabelaRegistros() {
                 </td>
                 <td className="px-5 py-2 md:py-2.5 text-right text-xs text-slate-400 font-mono flex justify-between items-center md:table-cell">
                   <span className="md:hidden font-semibold text-slate-500 font-sans">Total</span>
-                  <span>{novoTotal > 0 ? novoTotal.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) : "—"}</span>
+                  <span>{previsaoNovo.novoTotal > 0 ? previsaoNovo.novoTotal.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) : "—"}</span>
                 </td>
                 <td className="px-5 py-2 md:py-2.5 text-center text-xs text-slate-400 font-mono flex justify-between items-center md:table-cell">
                   <span className="md:hidden font-semibold text-slate-500 font-sans">% Refugo</span>
-                  <span>{novoTotal > 0 ? `${novoPct.toFixed(2)}%` : "—"}</span>
+                  <span>{previsaoNovo.novoTotal > 0 ? `${previsaoNovo.novoPct.toFixed(2)}%` : "—"}</span>
                 </td>
                 <td className="px-5 py-3 md:py-2.5 flex justify-end items-center md:table-cell border-t md:border-0 border-blue-200 mt-2 md:mt-0">
                   <div className="flex items-center justify-center gap-1.5 w-full md:w-auto">
@@ -399,12 +407,12 @@ export default function TabelaRegistros() {
                     </td>
                     <td className="px-5 py-2 md:py-2.5 text-right text-xs font-mono text-slate-600 flex justify-between items-center md:table-cell">
                       <span className="md:hidden font-semibold text-slate-500 font-sans">Total</span>
-                      <span>{editTotal.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}</span>
+                      <span>{previsaoEdit.editTotal.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}</span>
                     </td>
                     <td className="px-5 py-2 md:py-2.5 text-center flex justify-between items-center md:table-cell">
                       <span className="md:hidden font-semibold text-slate-500">% Refugo</span>
-                      <span className={cn("text-xs font-mono px-2 py-0.5 rounded-full", getPercentBadge(editPct, metaRefugo))}>
-                        {editPct.toFixed(2)}%
+                      <span className={cn("text-xs font-mono px-2 py-0.5 rounded-full", getPercentBadge(previsaoEdit.editPct, metaRefugo))}>
+                        {previsaoEdit.editPct.toFixed(2)}%
                       </span>
                     </td>
                     <td className="px-5 py-3 md:py-2.5 flex justify-end items-center md:table-cell border-t md:border-0 border-amber-200 mt-2 md:mt-0">
@@ -495,20 +503,20 @@ export default function TabelaRegistros() {
                 <td className="px-5 py-2 md:py-3 text-xs font-bold text-slate-700 uppercase tracking-wider text-center md:text-left border-b md:border-0 border-slate-200">Total Mensal</td>
                 <td className="px-5 py-2 md:py-3 text-right text-xs font-mono font-bold text-slate-800 flex justify-between items-center md:table-cell">
                   <span className="md:hidden font-semibold text-slate-500 font-sans">Produção</span>
-                  <span>{totalProducao.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span>{totais.totalProducao.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </td>
                 <td className="px-5 py-2 md:py-3 text-right text-xs font-mono font-bold text-slate-800 flex justify-between items-center md:table-cell">
                   <span className="md:hidden font-semibold text-slate-500 font-sans">Refugo</span>
-                  <span>{totalRefugo.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span>{totais.totalRefugo.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </td>
                 <td className="px-5 py-2 md:py-3 text-right text-xs font-mono font-bold text-slate-800 flex justify-between items-center md:table-cell">
                   <span className="md:hidden font-semibold text-slate-500 font-sans">Total</span>
-                  <span>{totalGeral.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span>{totais.totalGeral.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </td>
                 <td className="px-5 py-2 md:py-3 text-center flex justify-between items-center md:table-cell">
                   <span className="md:hidden font-semibold text-slate-500 font-sans">% Refugo</span>
-                  <span className={cn("text-xs font-mono font-bold px-2 py-0.5 rounded-full", getPercentBadge(percentTotal, metaRefugo))}>
-                    {percentTotal.toFixed(2)}%
+                  <span className={cn("text-xs font-mono font-bold px-2 py-0.5 rounded-full", getPercentBadge(totais.percentTotal, metaRefugo))}>
+                    {totais.percentTotal.toFixed(2)}%
                   </span>
                 </td>
                 <td className="hidden md:table-cell" />

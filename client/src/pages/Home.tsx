@@ -2,7 +2,7 @@
 // Página principal: layout com sidebar + área de conteúdo principal
 // Filosofia: clareza absoluta, dados em primeiro plano, feedback imediato
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { useDashboard } from "@/contexts/DashboardContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +20,26 @@ import { Menu, ChevronLeft, ChevronRight, Download, Sun, Moon, Clock, LogOut, Mo
 import { generateMonthlyPDF } from "@/lib/generatePDF";
 import { toast } from "sonner";
 
+const RelogioHeader = memo(function RelogioHeader() {
+  const [agora, setAgora] = useState(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setAgora(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-gray-50 text-xs text-gray-600">
+      <Clock className="w-3.5 h-3.5 text-gray-400" />
+      <span className="font-medium capitalize">
+        {agora.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" })}
+      </span>
+      <span className="text-gray-400">|</span>
+      <span className="font-mono font-semibold text-gray-700 tabular-nums">
+        {agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+      </span>
+    </div>
+  );
+});
+
 export default function Home() {
   const { mesAtual, setMesAtual, anoAtual, setAnoAtual, meses, metaRefugo, salvarTudo, getMesData } = useDashboard();
   const { theme, toggleTheme } = useTheme();
@@ -27,20 +47,7 @@ export default function Home() {
   const [modalConfig, setModalConfig] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [exportandoPDF, setExportandoPDF] = useState(false);
-  const [agora, setAgora] = useState(new Date());
   const tvState = useTVMode();
-
-  useEffect(() => {
-    const timer = setInterval(() => setAgora(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const dataFormatada = agora.toLocaleDateString("pt-BR", {
-    weekday: "short", day: "2-digit", month: "2-digit", year: "numeric",
-  });
-  const horaFormatada = agora.toLocaleTimeString("pt-BR", {
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
-  });
 
   async function handleExportPDF() {
     try {
@@ -156,13 +163,7 @@ export default function Home() {
                 <span className="hidden sm:inline">Exportar PDF</span>
               </button>
 
-              {/* Relógio */}
-              <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-gray-50 text-xs text-gray-600">
-                <Clock className="w-3.5 h-3.5 text-gray-400" />
-                <span className="font-medium capitalize">{dataFormatada}</span>
-                <span className="text-gray-400">|</span>
-                <span className="font-mono font-semibold text-gray-700 tabular-nums">{horaFormatada}</span>
-              </div>
+              <RelogioHeader />
 
               {/* Toggle modo claro/escuro */}
               <button

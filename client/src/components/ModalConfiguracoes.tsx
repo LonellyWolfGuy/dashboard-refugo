@@ -4,6 +4,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useDashboard } from "@/contexts/DashboardContext";
 import { MESES_NOMES } from "@/lib/initialData";
+import { ordenarMotivos } from "@/services/refugoService";
 import { X, Download, RotateCcw, Target, Plus, Trash2, Monitor, Upload, Image, ToggleLeft, ToggleRight, Loader2, Shrink } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -18,14 +19,6 @@ import { redimensionarImagem, blobParaFile } from "@/lib/imageUtils";
 interface ModalConfiguracoesProps {
   onClose: () => void;
 }
-
-// Ordena: alfabético, "Outros" sempre por último
-function ordenarMotivos(motivos: string[]): string[] {
-  const outros = motivos.filter(m => m.toLowerCase() === "outros");
-  const resto  = motivos.filter(m => m.toLowerCase() !== "outros").sort((a, b) => a.localeCompare(b, "pt-BR"));
-  return [...resto, ...outros];
-}
-
 
 export default function ModalConfiguracoes({ onClose }: ModalConfiguracoesProps) {
   const { anoAtual, metaRefugo, setMetaRefugo, getTotaisMes, meses, motivos, adicionarMotivo, removerMotivo } = useDashboard();
