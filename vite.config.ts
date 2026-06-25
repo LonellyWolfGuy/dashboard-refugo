@@ -62,7 +62,7 @@ export default defineConfig({
         manualChunks: {
           vendor: ["react", "react-dom"],
           charts: ["recharts"],
-          pdf: ["jspdf", "html2canvas"],
+          pdf: ["jspdf"],
         },
       },
     },
