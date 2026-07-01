@@ -4,7 +4,13 @@ import { buscarClima, DadosClima } from "@/services/weatherService";
 import { temAniversariantesNoMes } from "@/lib/initialData";
 import { supabase } from "@/lib/supabase";
 
-export type TipoSlide = "dashboard" | "clima" | "aniversariantes" | "imagem";
+export interface VideoItem {
+  url: string;
+  titulo: string;
+  legenda?: string;
+}
+
+export type TipoSlide = "dashboard" | "clima" | "aniversariantes" | "imagem" | "video";
 
 export interface TVModeState {
   isTVMode: boolean;
@@ -12,6 +18,9 @@ export interface TVModeState {
   slideImagem: MuralSlide | null;
   indiceImagem: number;
   totalImagens: number;
+  slideVideo: VideoItem | null;
+  indiceVideo: number;
+  totalVideos: number;
   progresso: number;
   dadosClima: DadosClima | null;
   temAniversariantes: boolean;
@@ -22,17 +31,32 @@ export interface TVModeState {
 
 const TV_SEG_DASHBOARD_KEY = "tv_seg_dashboard";
 const TV_SEG_IMAGEM_KEY    = "tv_seg_imagem";
+const TV_SEG_VIDEO_KEY     = "tv_seg_video";
+const TV_VIDEO_LIST_KEY    = "tv_video_list";
 const DEFAULT_SEG_DASHBOARD = 30;
 const DEFAULT_SEG_IMAGEM    = 15;
+const DEFAULT_SEG_VIDEO     = 60;
 const SEG_CLIMA = 20;
 const SEG_ANIVERSARIANTES = 20;
+
+function getVideos(): VideoItem[] {
+  try {
+    const raw = localStorage.getItem(TV_VIDEO_LIST_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as VideoItem[];
+  } catch {
+    return [];
+  }
+}
 
 function getConfig() {
   const d = parseInt(localStorage.getItem(TV_SEG_DASHBOARD_KEY) ?? "", 10);
   const i = parseInt(localStorage.getItem(TV_SEG_IMAGEM_KEY) ?? "", 10);
+  const v = parseInt(localStorage.getItem(TV_SEG_VIDEO_KEY) ?? "", 10);
   return {
     segDashboard: isNaN(d) ? DEFAULT_SEG_DASHBOARD : d,
     segImagem:    isNaN(i) ? DEFAULT_SEG_IMAGEM    : i,
+    segVideo:     isNaN(v) ? DEFAULT_SEG_VIDEO     : v,
   };
 }
 
@@ -57,8 +81,10 @@ export function useTVMode(): TVModeState {
   const [isTVMode,      setIsTVMode]      = useState(false);
   const [tipoSlide,     setTipoSlide]     = useState<TipoSlide>("dashboard");
   const [indiceImagem,  setIndiceImagem]  = useState(0);
+  const [indiceVideo,   setIndiceVideo]   = useState(0);
   const [progresso,     setProgresso]     = useState(0);
   const [imagens,       setImagens]       = useState<MuralSlide[]>([]);
+  const [videos,        setVideos]        = useState<VideoItem[]>([]);
   const [dadosClima,    setDadosClima]    = useState<DadosClima | null>(null);
   const [temAniversariantes, setTemAniversariantes] = useState(false);
 
@@ -66,7 +92,9 @@ export function useTVMode(): TVModeState {
   const progressoRef     = useRef(0);
   const tipoAtualRef     = useRef<TipoSlide>("dashboard");
   const indiceImagemRef  = useRef(0);
+  const indiceVideoRef   = useRef(0);
   const imagensRef       = useRef<MuralSlide[]>([]);
+  const videosRef        = useRef<VideoItem[]>([]);
   const preloadedRef     = useRef<Set<string>>(new Set());
   const abortRef         = useRef<AbortController | null>(null);
   const configRef        = useRef(getConfig());
@@ -74,6 +102,7 @@ export function useTVMode(): TVModeState {
   const sessionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   imagensRef.current = imagens;
+  videosRef.current = videos;
 
   const limparInterval = useCallback(() => {
     if (intervalRef.current) {
@@ -109,12 +138,15 @@ export function useTVMode(): TVModeState {
 
   const avancarSlide = useCallback(() => {
     const imgs = imagensRef.current;
+    const vids = videosRef.current;
 
     if (tipoAtualRef.current === "dashboard") {
       tipoAtualRef.current = "clima";
       setTipoSlide("clima");
       indiceImagemRef.current = 0;
       setIndiceImagem(0);
+      indiceVideoRef.current = 0;
+      setIndiceVideo(0);
     } else if (tipoAtualRef.current === "clima") {
       const mes = new Date().getMonth() + 1;
       const tem = temAniversariantesNoMes(mes);
@@ -125,18 +157,44 @@ export function useTVMode(): TVModeState {
       } else if (imgs.length > 0) {
         tipoAtualRef.current = "imagem";
         setTipoSlide("imagem");
+      } else if (vids.length > 0) {
+        tipoAtualRef.current = "video";
+        setTipoSlide("video");
       } else {
         tipoAtualRef.current = "dashboard";
         setTipoSlide("dashboard");
       }
       indiceImagemRef.current = 0;
       setIndiceImagem(0);
+      indiceVideoRef.current = 0;
+      setIndiceVideo(0);
     } else if (tipoAtualRef.current === "aniversariantes") {
       if (imgs.length > 0) {
         tipoAtualRef.current = "imagem";
         setTipoSlide("imagem");
+      } else if (vids.length > 0) {
+        tipoAtualRef.current = "video";
+        setTipoSlide("video");
+      } else {
+        tipoAtualRef.current = "dashboard";
+        setTipoSlide("dashboard");
+      }
+      indiceImagemRef.current = 0;
+      setIndiceImagem(0);
+      indiceVideoRef.current = 0;
+      setIndiceVideo(0);
+    } else if (tipoAtualRef.current === "imagem") {
+      const proximo = indiceImagemRef.current + 1;
+      if (proximo < imgs.length) {
+        indiceImagemRef.current = proximo;
+        setIndiceImagem(proximo);
+      } else if (vids.length > 0) {
+        tipoAtualRef.current = "video";
+        setTipoSlide("video");
         indiceImagemRef.current = 0;
         setIndiceImagem(0);
+        indiceVideoRef.current = 0;
+        setIndiceVideo(0);
       } else {
         tipoAtualRef.current = "dashboard";
         setTipoSlide("dashboard");
@@ -144,15 +202,15 @@ export function useTVMode(): TVModeState {
         setIndiceImagem(0);
       }
     } else {
-      const proximo = indiceImagemRef.current + 1;
-      if (proximo < imgs.length) {
-        indiceImagemRef.current = proximo;
-        setIndiceImagem(proximo);
+      const proximo = indiceVideoRef.current + 1;
+      if (proximo < vids.length) {
+        indiceVideoRef.current = proximo;
+        setIndiceVideo(proximo);
       } else {
         tipoAtualRef.current = "dashboard";
-        indiceImagemRef.current = 0;
         setTipoSlide("dashboard");
-        setIndiceImagem(0);
+        indiceVideoRef.current = 0;
+        setIndiceVideo(0);
       }
     }
 
@@ -178,6 +236,7 @@ export function useTVMode(): TVModeState {
         tipoAtualRef.current === "dashboard" ? cfg.segDashboard * 1000 :
         tipoAtualRef.current === "clima" ? SEG_CLIMA * 1000 :
         tipoAtualRef.current === "aniversariantes" ? SEG_ANIVERSARIANTES * 1000 :
+        tipoAtualRef.current === "video" ? cfg.segVideo * 1000 :
         cfg.segImagem * 1000;
 
       progressoRef.current += TICK_MS;
@@ -209,10 +268,16 @@ export function useTVMode(): TVModeState {
     const mesAtual = new Date().getMonth() + 1;
     setTemAniversariantes(temAniversariantesNoMes(mesAtual));
 
+    const listaVideos = getVideos();
+    setVideos(listaVideos);
+    videosRef.current = listaVideos;
+
     tipoAtualRef.current  = "dashboard";
     indiceImagemRef.current = 0;
-    setTipoSlide("dashboard");
     setIndiceImagem(0);
+    indiceVideoRef.current = 0;
+    setIndiceVideo(0);
+    setTipoSlide("dashboard");
     setProgresso(0);
     progressoRef.current = 0;
 
@@ -253,12 +318,15 @@ export function useTVMode(): TVModeState {
     setIsTVMode(false);
     setTipoSlide("dashboard");
     setIndiceImagem(0);
+    setIndiceVideo(0);
     setProgresso(0);
     progressoRef.current = 0;
     tipoAtualRef.current = "dashboard";
     setDadosClima(null);
     setImagens([]);
     imagensRef.current = [];
+    setVideos([]);
+    videosRef.current = [];
     preloadedRef.current.clear();
 
     if (wakeLockRef.current) {
@@ -330,12 +398,19 @@ export function useTVMode(): TVModeState {
     ? { ...slideAtual, url_publica: getUrlOtimizada(slideAtual.storage_path) }
     : null;
 
+  const videoAtual = tipoSlide === "video" && videos.length > 0 && indiceVideo < videos.length
+    ? videos[indiceVideo]
+    : null;
+
   return {
     isTVMode,
     tipoSlide,
     slideImagem,
     indiceImagem,
     totalImagens: imagens.length,
+    slideVideo: videoAtual,
+    indiceVideo,
+    totalVideos: videos.length,
     progresso,
     dadosClima,
     temAniversariantes,

@@ -5,7 +5,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useDashboard } from "@/contexts/DashboardContext";
 import { MESES_NOMES } from "@/lib/initialData";
 import { ordenarMotivos } from "@/services/refugoService";
-import { X, Download, RotateCcw, Target, Plus, Trash2, Monitor, Upload, Image, ToggleLeft, ToggleRight, Loader2, Shrink } from "lucide-react";
+import { X, Download, RotateCcw, Target, Plus, Trash2, Monitor, Upload, Image, ToggleLeft, ToggleRight, Loader2, Shrink, Video, Film, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   listarTodosSlides,
@@ -37,13 +37,36 @@ export default function ModalConfiguracoes({ onClose }: ModalConfiguracoesProps)
   const [infoOtimizacao, setInfoOtimizacao] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Estado Vídeos ──────────────────────────────────────────────────────────
+  const TV_VIDEO_LIST_KEY = "tv_video_list";
+
+  interface VideoItem {
+    url: string;
+    titulo: string;
+    legenda?: string;
+  }
+
+  const [videos, setVideos] = useState<VideoItem[]>(() => {
+    try {
+      const raw = localStorage.getItem(TV_VIDEO_LIST_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  });
+  const [novaUrlVideo, setNovaUrlVideo] = useState("");
+  const [novoTituloVideo, setNovoTituloVideo] = useState("");
+  const [novaLegendaVideo, setNovaLegendaVideo] = useState("");
+
   const TV_SEG_DASHBOARD_KEY = "tv_seg_dashboard";
   const TV_SEG_IMAGEM_KEY    = "tv_seg_imagem";
+  const TV_SEG_VIDEO_KEY     = "tv_seg_video";
   const [segDashboard, setSegDashboard] = useState(
     () => parseInt(localStorage.getItem(TV_SEG_DASHBOARD_KEY) ?? "30", 10) || 30
   );
   const [segImagem, setSegImagem] = useState(
     () => parseInt(localStorage.getItem(TV_SEG_IMAGEM_KEY) ?? "15", 10) || 15
+  );
+  const [segVideo, setSegVideo] = useState(
+    () => parseInt(localStorage.getItem(TV_SEG_VIDEO_KEY) ?? "60", 10) || 60
   );
 
   // Carrega slides ao entrar na aba Modo TV
@@ -135,9 +158,34 @@ export default function ModalConfiguracoes({ onClose }: ModalConfiguracoesProps)
     }
   }
 
+  function adicionarVideo() {
+    if (!novaUrlVideo.trim()) { toast.error("Informe a URL do vídeo."); return; }
+    if (!novoTituloVideo.trim()) { toast.error("Informe um título para o vídeo."); return; }
+    const novo: VideoItem = {
+      url: novaUrlVideo.trim(),
+      titulo: novoTituloVideo.trim(),
+      legenda: novaLegendaVideo.trim() || undefined,
+    };
+    const atualizados = [...videos, novo];
+    setVideos(atualizados);
+    localStorage.setItem(TV_VIDEO_LIST_KEY, JSON.stringify(atualizados));
+    setNovaUrlVideo("");
+    setNovoTituloVideo("");
+    setNovaLegendaVideo("");
+    toast.success("Vídeo adicionado ao Modo TV!");
+  }
+
+  function removerVideo(index: number) {
+    const atualizados = videos.filter((_, i) => i !== index);
+    setVideos(atualizados);
+    localStorage.setItem(TV_VIDEO_LIST_KEY, JSON.stringify(atualizados));
+    toast.success("Vídeo removido.");
+  }
+
   function salvarTempos() {
     localStorage.setItem(TV_SEG_DASHBOARD_KEY, String(segDashboard));
     localStorage.setItem(TV_SEG_IMAGEM_KEY, String(segImagem));
+    localStorage.setItem(TV_SEG_VIDEO_KEY, String(segVideo));
     toast.success("Tempos do Modo TV salvos!");
   }
 
@@ -524,6 +572,66 @@ export default function ModalConfiguracoes({ onClose }: ModalConfiguracoesProps)
                 )}
               </div>
 
+              {/* Gerenciamento de Vídeos */}
+              <div className="border-t border-slate-100 pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Film className="w-4 h-4 text-red-700" />
+                  <h3 className="text-sm font-semibold text-slate-700">Adicionar Vídeo ao Mural</h3>
+                </div>
+                <p className="text-xs text-slate-500 mb-3">
+                  URLs de vídeos MP4 diretos ou do YouTube. Os vídeos são exibidos após as imagens no ciclo.
+                </p>
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={novaUrlVideo}
+                    onChange={e => setNovaUrlVideo(e.target.value)}
+                    placeholder="URL do vídeo (MP4 direto ou YouTube)"
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                  />
+                  <input
+                    type="text"
+                    value={novoTituloVideo}
+                    onChange={e => setNovoTituloVideo(e.target.value)}
+                    placeholder="Título do vídeo*"
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                  />
+                  <input
+                    type="text"
+                    value={novaLegendaVideo}
+                    onChange={e => setNovaLegendaVideo(e.target.value)}
+                    placeholder="Legenda opcional"
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                  />
+                  <button
+                    onClick={adicionarVideo}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-700 text-white text-sm font-semibold rounded-lg hover:bg-red-800 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" /> Adicionar Vídeo
+                  </button>
+                </div>
+
+                {videos.length > 0 && (
+                  <div className="mt-3 space-y-2 max-h-40 overflow-y-auto">
+                    {videos.map((v, i) => (
+                      <div key={i} className="flex items-center gap-3 bg-slate-50 rounded-lg border border-slate-100 p-2 group">
+                        <Video className="w-8 h-6 text-red-500 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-700 truncate">{v.titulo}</p>
+                          <p className="text-xs text-slate-400 truncate">{v.url}</p>
+                        </div>
+                        <button
+                          onClick={() => removerVideo(i)}
+                          className="flex-shrink-0 p-1 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* Configurações de tempo */}
               <div className="border-t border-slate-100 pt-4">
                 <h3 className="text-sm font-semibold text-slate-700 mb-3">Tempos de Exibição</h3>
@@ -549,6 +657,17 @@ export default function ModalConfiguracoes({ onClose }: ModalConfiguracoesProps)
                       className="w-20 border border-slate-200 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                     <span className="text-xs text-slate-400">padrão: 15s</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs text-slate-600 w-36 flex-shrink-0">Por vídeo (segundos)</label>
+                    <input
+                      type="number"
+                      min={5} max={600}
+                      value={segVideo}
+                      onChange={e => setSegVideo(Number(e.target.value))}
+                      className="w-20 border border-slate-200 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                    <span className="text-xs text-slate-400">padrão: 60s</span>
                   </div>
                   <button
                     onClick={salvarTempos}

@@ -757,6 +757,145 @@ function SlideImagem({ urlPublica, titulo, legenda }: SlideImagemProps) {
   );
 }
 
+// ─── Sub-componente: Slide de Vídeo ────────────────────────────────────────────
+
+interface SlideVideoProps {
+  url: string;
+  titulo: string;
+  legenda?: string;
+  onEnded?: () => void;
+}
+
+function SlideVideo({ url, titulo, legenda, onEnded }: SlideVideoProps) {
+  const [ready, setReady] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const isYouTube =
+    url.includes("youtube.com/watch") ||
+    url.includes("youtu.be/") ||
+    url.includes("youtube.com/embed");
+
+  useEffect(() => {
+    setReady(false);
+  }, [url]);
+
+  let embedUrl = "";
+  if (isYouTube) {
+    if (url.includes("youtube.com/watch")) {
+      const params = new URLSearchParams(new URL(url).search);
+      const v = params.get("v");
+      embedUrl = `https://www.youtube.com/embed/${v}?autoplay=1&mute=1&loop=1&playlist=${v}&controls=0&modestbranding=1&rel=0`;
+    } else if (url.includes("youtu.be/")) {
+      const id = url.split("/").pop()?.split("?")[0];
+      embedUrl = `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&modestbranding=1&rel=0`;
+    } else if (url.includes("youtube.com/embed")) {
+      embedUrl = url + (url.includes("?") ? "&" : "?") + "autoplay=1&mute=1&loop=1&controls=0&modestbranding=1&rel=0";
+    }
+  }
+
+  if (isYouTube) {
+    return (
+      <div className="relative w-full h-full overflow-hidden" style={{ background: "#000" }}>
+        <iframe
+          src={embedUrl}
+          className="absolute inset-0 w-full h-full"
+          style={{ border: "none" }}
+          allow="autoplay; encrypted-media"
+          allowFullScreen
+          onLoad={() => setReady(true)}
+        />
+        {!ready && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
+          </div>
+        )}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: "linear-gradient(to top, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.05) 50%, transparent 100%)"
+        }} />
+        <div className="absolute top-8 left-10 z-10">
+          <p className="uppercase font-bold tracking-[0.3em]"
+            style={{ color: "rgba(255,255,255,0.7)", fontSize: "clamp(0.85rem, 1.2vw, 1.1rem)" }}>
+            Implatec Perfis Plásticos
+          </p>
+        </div>
+        <div className="absolute bottom-0 left-0 right-0 px-14 pb-14 z-10">
+          <div className="mb-5" style={{ width: 60, height: 4, borderRadius: 2, background: "white", opacity: 0.8 }} />
+          <h2 className="font-black text-white"
+            style={{
+              fontSize: "clamp(2.5rem, 6vw, 5.5rem)",
+              lineHeight: 1.05,
+              textShadow: "0 2px 16px rgba(0,0,0,0.5)",
+              letterSpacing: "-0.01em",
+            }}>
+            {titulo}
+          </h2>
+          {legenda && (
+            <p className="mt-4 font-semibold"
+              style={{
+                color: "rgba(255,255,255,0.85)",
+                fontSize: "clamp(1.2rem, 2.5vw, 2.2rem)",
+                textShadow: "0 1px 8px rgba(0,0,0,0.4)",
+              }}>
+              {legenda}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full h-full overflow-hidden" style={{ background: "#000" }}>
+      <video
+        ref={videoRef}
+        src={url}
+        autoPlay
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full"
+        style={{ objectFit: "contain" }}
+        onCanPlay={() => setReady(true)}
+        onEnded={onEnded}
+      />
+      {!ready && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
+        </div>
+      )}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background: "linear-gradient(to top, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.05) 50%, transparent 100%)"
+      }} />
+      <div className="absolute top-8 left-10 z-10">
+        <p className="uppercase font-bold tracking-[0.3em]"
+          style={{ color: "rgba(255,255,255,0.7)", fontSize: "clamp(0.85rem, 1.2vw, 1.1rem)" }}>
+          Implatec Perfis Plásticos
+        </p>
+      </div>
+      <div className="absolute bottom-0 left-0 right-0 px-14 pb-14 z-10">
+        <div className="mb-5" style={{ width: 60, height: 4, borderRadius: 2, background: "white", opacity: 0.8 }} />
+        <h2 className="font-black text-white"
+          style={{
+            fontSize: "clamp(2.5rem, 6vw, 5.5rem)",
+            lineHeight: 1.05,
+            textShadow: "0 2px 16px rgba(0,0,0,0.5)",
+            letterSpacing: "-0.01em",
+          }}>
+          {titulo}
+        </h2>
+        {legenda && (
+          <p className="mt-4 font-semibold"
+            style={{
+              color: "rgba(255,255,255,0.85)",
+              fontSize: "clamp(1.2rem, 2.5vw, 2.2rem)",
+              textShadow: "0 1px 8px rgba(0,0,0,0.4)",
+            }}>
+            {legenda}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Componente Principal: ModoTV ─────────────────────────────────────────────
 
 interface ModoTVProps {
@@ -764,7 +903,7 @@ interface ModoTVProps {
 }
 
 export default function ModoTV({ tvState }: ModoTVProps) {
-  const { tipoSlide, slideImagem, indiceImagem, totalImagens, progresso, dadosClima, temAniversariantes, sair, avancar } = tvState;
+  const { tipoSlide, slideImagem, indiceImagem, totalImagens, slideVideo, indiceVideo, totalVideos, progresso, dadosClima, temAniversariantes, sair, avancar } = tvState;
 
   const [fadeKey, setFadeKey] = useState(0);
   const [showControls, setShowControls] = useState(false);
@@ -789,15 +928,22 @@ export default function ModoTV({ tvState }: ModoTVProps) {
     };
   }, []);
 
-  const totalSlides = useMemo(() => (temAniversariantes ? 3 : 2) + totalImagens, [temAniversariantes, totalImagens]);
+  const totalSlides = useMemo(() => (temAniversariantes ? 3 : 2) + totalImagens + totalVideos, [temAniversariantes, totalImagens, totalVideos]);
   const baseImagem = temAniversariantes ? 3 : 2;
-  const indiceGlobal = tipoSlide === "dashboard" ? 0 : tipoSlide === "clima" ? 1 : tipoSlide === "aniversariantes" ? 2 : indiceImagem + baseImagem;
+  const baseVideo = baseImagem + totalImagens;
+  const indiceGlobal =
+    tipoSlide === "dashboard" ? 0 :
+    tipoSlide === "clima" ? 1 :
+    tipoSlide === "aniversariantes" ? 2 :
+    tipoSlide === "video" ? indiceVideo + baseVideo :
+    indiceImagem + baseImagem;
   const dots = useMemo(() => Array.from({ length: totalSlides }), [totalSlides]);
 
   const barCor =
     tipoSlide === "dashboard" ? "linear-gradient(90deg,#1d4ed8,#60a5fa)" :
     tipoSlide === "clima" ? "linear-gradient(90deg,#7c3aed,#a78bfa)" :
     tipoSlide === "aniversariantes" ? "linear-gradient(90deg,#ec4899,#a855f7)" :
+    tipoSlide === "video" ? "linear-gradient(90deg,#dc2626,#f87171)" :
     "linear-gradient(90deg,#16a34a,#4ade80)";
 
   return (
@@ -810,8 +956,10 @@ export default function ModoTV({ tvState }: ModoTVProps) {
           <SlideClima dadosClima={dadosClima} />
         ) : tipoSlide === "aniversariantes" ? (
           <SlideAniversariantes />
-        ) : slideImagem ? (
+        ) : tipoSlide === "imagem" && slideImagem ? (
           <SlideImagem urlPublica={slideImagem.url_publica} titulo={slideImagem.titulo} legenda={slideImagem.legenda} />
+        ) : tipoSlide === "video" && slideVideo ? (
+          <SlideVideo url={slideVideo.url} titulo={slideVideo.titulo} legenda={slideVideo.legenda} onEnded={avancar} />
         ) : (
           <SlideDashboard />
         )}
