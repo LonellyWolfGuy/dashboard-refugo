@@ -20,7 +20,7 @@ Sistema web para controle e análise de refugo industrial. Permite lançar regis
 - **Segurança Reforçada (RLS)** — Implantação de _Row Level Security_ para blindar acessos indevidos a dados de outras sessões (quando no Supabase).
 - **Optimistic Updates** — Sincronização instantânea na UI; registros aparecem, editam e somem da tela no exato momento do clique, com tratamento de erro e rollback automático. (Implementado por Thiago Fischer)
 - **Performance de Elite** — Memoização profunda de estados derivados e processamento de meses, garantindo fluidez mesmo com centenas de registros. (Implementado por Thiago Fischer)
-- **Modo TV** — Modo de exibição em tela cheia para TV industrial com 4 tipos de slide: dashboard com métricas animadas, clima (Open-Meteo), aniversariantes do mês e imagens do mural. Ciclo automático com progresso visual. (Implementado por Thiago Fischer)
+- **Modo TV** — Modo de exibição em tela cheia para TV industrial com 5 tipos de slide: dashboard com métricas animadas, clima (Open-Meteo), aniversariantes do mês, imagens do mural e vídeos (MP4 direto ou YouTube). Ciclo automático com progresso visual. (Implementado por Thiago Fischer)
 - **Slide de Aniversariantes** — Exibe aniversariantes do mês corrente com design festivo; pula automaticamente se não houver dados. (Implementado por Thiago Fischer)
 - **Slide de Clima** — Previsão do tempo para Joinville via Open-Meteo (gratuito, sem chave de API) com temperatura atual e previsão de 3 dias. (Implementado por Thiago Fischer)
 - **Mural de Imagens** — Upload e gerenciamento de slides (JPG/PNG/WEBP) via Supabase Storage para exibição no Modo TV. (Implementado por Thiago Fischer)
@@ -42,7 +42,7 @@ Sistema web para controle e análise de refugo industrial. Permite lançar regis
 - **Dados preservados entre deploys** — atualizações de código nunca sobrescrevem os dados do banco; cada registro é uma linha independente no Supabase, eliminando race conditions e sobrescrita acidental
 - **Tema claro/escuro** — alternância manual pelo cabeçalho
 - **Totalmente Responsivo** — layout inteligente que alterna entre tabela (Desktop) e Cards (Mobile) para máxima usabilidade em qualquer tela
-- **Modo TV** — tela cheia com slideshow automático: dashboard com % refugo animado, clima, aniversariantes do mês e imagens do mural
+- **Modo TV** — tela cheia com slideshow automático: dashboard com % refugo animado, clima, aniversariantes do mês, imagens do mural e vídeos (MP4 ou YouTube)
 - **Mural de Imagens** — upload de fotos da fábrica com legendas para exibição no Modo TV
 
 ---
@@ -81,7 +81,7 @@ dashboard-refugo/
 │       │   ├── Sidebar.tsx             # Menu lateral com navegação por mês
 │       │   ├── ModalConfiguracoes.tsx  # Configurações (meta, motivos, dados, Modo TV)
 │       │   ├── ModalMotivoRefugo.tsx   # Modal de motivos por lançamento
-│       │   ├── ModoTV.tsx              # Modo TV fullscreen (dashboard, clima, aniversariantes, imagens)
+│       │   ├── ModoTV.tsx              # Modo TV fullscreen (dashboard, clima, aniversariantes, imagens, vídeos)
 │       │   └── ErrorBoundary.tsx       # Limite de erro do React
 │       ├── contexts/
 │       │   ├── AuthContext.tsx         # Estado de autenticação + Supabase Auth
@@ -255,8 +255,9 @@ Botão **Modo TV** no cabeçalho ativa um slideshow fullscreen para exibição e
 2. **Clima** — Temperatura e condições atuais de Joinville com previsão para 3 dias via Open-Meteo (gratuito, sem chave de API)
 3. **Aniversariantes** — Lista dos aniversariantes do mês corrente com design festivo. Pula automaticamente se não houver dados no mês
 4. **Imagens do Mural** — Fotos enviadas via configurações com título e legenda
+5. **Vídeos** — Reprodução automática de vídeos MP4 diretos ou do YouTube com título e legenda. Avança automaticamente ao final do vídeo
 
-O tempo de exibição de cada slide é configurável (dashboard e imagens). Navegação manual por clique ou seta, ESC para sair.
+O tempo de exibição de cada slide é configurável (dashboard, imagens e vídeos). Navegação manual por clique ou seta, ESC para sair.
 
 ### Botão Sair
 
@@ -355,7 +356,7 @@ Acessíveis pelo ícone ⚙️ na sidebar:
 - **Meta de refugo (%)** — percentual alvo. Registros acima da meta são destacados em vermelho
 - **Motivos de refugo** — lista customizável disponível ao lançar um registro
 - **Dados** — exportar CSV e limpar todos os dados
-- **Modo TV** — upload de imagens (JPG/PNG/WEBP, máx. 5MB), ativar/desativar slides, configurar tempo de exibição do dashboard e das imagens
+- **Modo TV** — upload de imagens (JPG/PNG/WEBP, máx. 5MB) e gerenciamento de vídeos (MP4 direto ou YouTube), ativar/desativar slides, configurar tempo de exibição do dashboard, imagens e vídeos
 
 ---
 
