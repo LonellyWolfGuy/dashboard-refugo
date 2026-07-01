@@ -214,7 +214,7 @@ function SlideDashboard() {
   const diff = temDados && temPrevio ? pct - pctPrevio : null;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden" style={{ background: "#1a1d2e" }}>
+    <div className="flex flex-col w-full h-full overflow-hidden relative" style={{ background: "#1a1d2e" }}>
 
       <div className="absolute inset-0 pointer-events-none opacity-50"
         style={{
@@ -394,7 +394,7 @@ function SlideClima({ dadosClima }: SlideClimaProps) {
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden" style={{ background: "linear-gradient(135deg, #1a1a4e 0%, #283593 40%, #3f51b5 100%)" }}>
+    <div className="flex flex-col w-full h-full overflow-hidden relative" style={{ background: "linear-gradient(135deg, #1a1a4e 0%, #283593 40%, #3f51b5 100%)" }}>
 
       <div className="absolute inset-0 pointer-events-none" style={{
         background: "radial-gradient(ellipse 80% 50% at 50% 100%, rgba(150,200,255,0.15), transparent)",
@@ -533,7 +533,7 @@ function SlideAniversariantes() {
   const totalAmbos = nascimento.length + tempoCasa.length;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden" style={{ background: "linear-gradient(135deg, #1a1030 0%, #2d1b4e 30%, #4a2a7a 60%, #1a1a3e 100%)" }}>
+    <div className="flex flex-col w-full h-full overflow-hidden relative" style={{ background: "linear-gradient(135deg, #1a1030 0%, #2d1b4e 30%, #4a2a7a 60%, #1a1a3e 100%)" }}>
 
       <div className="absolute inset-0 pointer-events-none" style={{
         background: `
@@ -910,7 +910,7 @@ export default function ModoTV({ tvState }: ModoTVProps) {
 
   useEffect(() => {
     setFadeKey(k => k + 1);
-  }, [tipoSlide, indiceImagem]);
+  }, [tipoSlide, indiceImagem, indiceVideo]);
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
