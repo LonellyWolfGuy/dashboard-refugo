@@ -12,7 +12,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useDashboard } from "@/contexts/DashboardContext";
 import { useTVMode } from "@/hooks/useTVMode";
 import { MESES_NOMES, aniversariantesNascimentoDoMes, aniversariantesTempoCasaDoMes, anosDeCasa } from "@/lib/initialData";
-import { X, ChevronRight, AlertTriangle, CheckCircle2, Cloud } from "lucide-react";
+import { X, ChevronRight, AlertTriangle, CheckCircle2, Cloud, Cake, Trophy, CalendarDays, Sparkles } from "lucide-react";
 import { buscarClima, descricaoTempo, iconeTempo, DadosClima } from "@/services/weatherService";
 
 // ─── Hook compartilhado de relógio ────────────────────────────────────────────
@@ -518,6 +518,25 @@ function formatarDataCompleta(dataStr: string): string {
   return `${parseInt(dia)} de ${meses[parseInt(mes) - 1]} de ${ano}`;
 }
 
+function iniciaisNome(nome: string): string {
+  const partes = nome.trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+  return `${partes[0][0]}${partes[partes.length - 1][0]}`.toUpperCase();
+}
+
+function proximidadeDoEvento(dataStr: string, agora: Date): string {
+  const [dia, mes] = dataStr.split("/").map(Number);
+  const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+  const evento = new Date(agora.getFullYear(), mes - 1, dia);
+  const diferenca = Math.round((evento.getTime() - hoje.getTime()) / 86_400_000);
+
+  if (diferenca === 0) return "Hoje!";
+  if (diferenca === 1) return "Amanhã";
+  if (diferenca === -1) return "Ontem";
+  if (diferenca > 1) return `Em ${diferenca} dias`;
+  return `Há ${Math.abs(diferenca)} dias`;
+}
+
 function SlideAniversariantes() {
   const agora = useClock();
 
@@ -532,151 +551,141 @@ function SlideAniversariantes() {
 
   const totalAmbos = nascimento.length + tempoCasa.length;
   const temDuasSecoes = nascimento.length > 0 && tempoCasa.length > 0;
+  const conteudoDenso = totalAmbos > 6;
 
   return (
-    <div className="flex flex-col w-full h-full overflow-hidden relative" style={{ background: "linear-gradient(135deg, #1a1030 0%, #2d1b4e 30%, #4a2a7a 60%, #1a1a3e 100%)" }}>
+    <div className="flex flex-col w-full h-full overflow-hidden relative" style={{ background: "linear-gradient(145deg, #130b26 0%, #24133e 42%, #321b54 72%, #15152f 100%)" }}>
 
       <div className="absolute inset-0 pointer-events-none" style={{
         background: `
-          radial-gradient(ellipse 50% 30% at 50% 0%, rgba(236,72,153,0.18), transparent),
-          radial-gradient(ellipse 40% 30% at 80% 80%, rgba(168,85,247,0.12), transparent),
-          radial-gradient(ellipse 30% 30% at 20% 70%, rgba(251,191,36,0.08), transparent)
+          radial-gradient(circle at 18% 5%, rgba(236,72,153,0.22), transparent 30%),
+          radial-gradient(circle at 84% 15%, rgba(168,85,247,0.2), transparent 28%),
+          radial-gradient(circle at 70% 92%, rgba(251,191,36,0.12), transparent 32%)
         `,
       }} />
 
-      <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">
-        <span style={{ position: "absolute", top: "8%", left: "5%", fontSize: "clamp(2rem, 4vw, 3.5rem)", opacity: 0.25, transform: "rotate(-15deg)" }}>🎉</span>
-        <span style={{ position: "absolute", top: "12%", right: "8%", fontSize: "clamp(2.5rem, 5vw, 4rem)", opacity: 0.2, transform: "rotate(20deg)" }}>🎈</span>
-        <span style={{ position: "absolute", bottom: "15%", left: "10%", fontSize: "clamp(1.8rem, 3.5vw, 3rem)", opacity: 0.18 }}>🎁</span>
-        <span style={{ position: "absolute", bottom: "20%", right: "5%", fontSize: "clamp(2rem, 4vw, 3.5rem)", opacity: 0.2, transform: "rotate(-10deg)" }}>🎂</span>
-      </div>
+      <div className="tv-celebration-orb tv-celebration-orb--one" />
+      <div className="tv-celebration-orb tv-celebration-orb--two" />
 
-      <div className="relative z-10 flex items-start justify-between px-10 pt-6" style={{ flexShrink: 0 }}>
-        <div>
-          <p className="uppercase tracking-widest font-bold"
-            style={{ color: "rgba(255,255,255,0.6)", fontSize: "clamp(0.85rem, 1.2vw, 1.1rem)" }}>
-            Implatec — Aniversariantes do Mês
-          </p>
-          <h2 className="font-black text-white capitalize leading-none mt-1"
-            style={{ fontSize: "clamp(2rem, 3.5vw, 3.2rem)" }}>
-            {MESES_NOMES[mesAtual - 1]}
+      <header className="tv-celebration-header relative z-10 flex items-start justify-between px-8 pt-5 flex-shrink-0">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center justify-center rounded-lg" style={{ width: 30, height: 30, color: "#f9a8d4", background: "rgba(236,72,153,0.16)", border: "1px solid rgba(236,72,153,0.24)" }}>
+              <Sparkles size={17} />
+            </span>
+            <p className="uppercase tracking-[0.2em] font-bold" style={{ color: "rgba(255,255,255,0.56)", fontSize: "clamp(0.7rem, 1vw, 0.92rem)" }}>
+              Gente que faz a diferença
+            </p>
+          </div>
+          <h2 className="font-black text-white leading-none mt-2" style={{ fontSize: "clamp(2rem, 3.6vw, 3.4rem)", letterSpacing: "-0.035em" }}>
+            Celebramos <span className="tv-celebration-gradient-text">juntos</span>
           </h2>
+          <p className="tv-celebration-subtitle mt-2 font-medium" style={{ color: "rgba(255,255,255,0.48)", fontSize: "clamp(0.8rem, 1.15vw, 1rem)" }}>
+            {MESES_NOMES[mesAtual - 1]} · {totalAmbos} {totalAmbos === 1 ? "história" : "histórias"} para celebrar
+          </p>
         </div>
-        <div className="flex flex-col items-end">
-          <span className="font-mono font-black text-white tabular-nums leading-none"
-            style={{ fontSize: "clamp(3.5rem, 6vw, 5rem)" }}>
+
+        <div className="flex flex-col items-end flex-shrink-0 ml-6">
+          <span className="font-mono font-black text-white tabular-nums leading-none" style={{ fontSize: "clamp(2.8rem, 5vw, 4.4rem)" }}>
             {hora}
           </span>
-          <p className="capitalize text-slate-400 font-medium"
-            style={{ fontSize: "clamp(0.8rem, 1.3vw, 1.1rem)" }}>
+          <p className="capitalize font-medium mt-1" style={{ color: "rgba(255,255,255,0.4)", fontSize: "clamp(0.72rem, 1vw, 0.92rem)" }}>
             {data}
           </p>
         </div>
-      </div>
+      </header>
 
-      <div className={`tv-birthday-content relative z-10 flex-1 min-h-0 grid px-8 pt-4 pb-5 gap-4 ${temDuasSecoes ? "tv-birthday-content--split" : "tv-birthday-content--single"}`}>
+      <main className={`tv-birthday-content relative z-10 flex-1 min-h-0 grid px-8 pt-4 pb-5 gap-4 ${temDuasSecoes ? "tv-birthday-content--split" : "tv-birthday-content--single"} ${conteudoDenso ? "tv-birthday-content--dense" : ""}`}>
 
-        {/* ─── Seção: Aniversário de Nascimento ────────────────────────────── */}
         {nascimento.length > 0 && (
-          <div className="tv-celebration-panel flex flex-col min-h-0 rounded-3xl p-4">
-            <div className="flex items-center gap-3 mb-3 flex-shrink-0">
-              <span className="text-3xl">🎂</span>
-              <span className="font-black" style={{
-                fontSize: "clamp(1.2rem, 2vw, 1.8rem)",
-                background: "linear-gradient(135deg, #f9a8d4, #e879f9, #c084fc)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}>
-                Aniversário de Nascimento
-              </span>
-            </div>
-            <div className="tv-celebration-cards grid flex-1 min-h-0 gap-3">
-              {nascimento.map((p) => (
-                <div key={`n-${p.nome}`} className="rounded-2xl px-4 py-3 text-center flex flex-col justify-center min-w-0"
-                  style={{
-                    background: "linear-gradient(135deg, rgba(236,72,153,0.18), rgba(236,72,153,0.08))",
-                    border: "1px solid rgba(236,72,153,0.3)",
-                  }}>
-                  <p className="font-black text-white leading-tight"
-                    style={{ fontSize: "clamp(1.1rem, 1.8vw, 1.7rem)" }}>
-                    {p.nome}
-                  </p>
-                  <p className="font-semibold mt-2" style={{
-                    fontSize: "clamp(0.72rem, 1vw, 0.9rem)",
-                    color: "#f9a8d4",
-                    lineHeight: 1.4,
-                  }}>
-                    PARABÉNS EM NOME DA EQUIPE IMPLATEC
-                  </p>
-                  <p className="font-medium mt-1"
-                    style={{ color: "rgba(255,255,255,0.5)", fontSize: "clamp(0.75rem, 1vw, 0.9rem)" }}>
-                    Dia {formatarDataBR(p.nascimento)}
-                  </p>
+          <section className="tv-celebration-panel tv-celebration-panel--birthday flex flex-col min-h-0 rounded-3xl p-4">
+            <div className="tv-panel-heading flex items-center justify-between gap-3 mb-3 flex-shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="tv-panel-icon tv-panel-icon--birthday"><Cake size={22} /></span>
+                <div className="min-w-0">
+                  <p className="uppercase tracking-[0.16em] font-bold" style={{ color: "#f9a8d4", fontSize: "clamp(0.62rem, 0.85vw, 0.78rem)" }}>Aniversários</p>
+                  <h3 className="font-black text-white leading-tight" style={{ fontSize: "clamp(1.05rem, 1.6vw, 1.45rem)" }}>Um novo ciclo começa</h3>
                 </div>
-              ))}
+              </div>
+              <span className="tv-panel-count">{nascimento.length}</span>
             </div>
-          </div>
-        )}
 
-        {/* ─── Seção: Tempo de Casa ──────────────────────────────────────── */}
-        {tempoCasa.length > 0 && (
-          <div className="tv-celebration-panel flex flex-col min-h-0 rounded-3xl p-4">
-            <div className="flex items-center gap-3 mb-3 flex-shrink-0">
-              <span className="text-3xl">🏆</span>
-              <span className="font-black" style={{
-                fontSize: "clamp(1.2rem, 2vw, 1.8rem)",
-                background: "linear-gradient(135deg, #fbbf24, #f59e0b, #d97706)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}>
-                Tempo de Casa
-              </span>
-            </div>
-            <div className="tv-celebration-cards grid flex-1 min-h-0 gap-3">
-              {tempoCasa.map((p) => {
-                const anos = anosDeCasa(p.admissao);
+            <div className={`tv-celebration-cards grid flex-1 min-h-0 gap-3 ${nascimento.length === 1 ? "tv-celebration-cards--solo" : ""}`}>
+              {nascimento.map((p, index) => {
+                const proximidade = proximidadeDoEvento(p.nascimento, agora);
                 return (
-                  <div key={`t-${p.nome}`} className="rounded-2xl px-4 py-3 text-center flex flex-col justify-center min-w-0"
-                    style={{
-                      background: "linear-gradient(135deg, rgba(251,191,36,0.18), rgba(251,191,36,0.08))",
-                      border: "1px solid rgba(251,191,36,0.3)",
-                    }}>
-                    <p className="font-black text-white leading-tight"
-                      style={{ fontSize: "clamp(1.1rem, 1.8vw, 1.7rem)" }}>
-                      {p.nome}
-                    </p>
-                    <p className="font-semibold mt-2" style={{
-                      fontSize: "clamp(0.72rem, 1vw, 0.9rem)",
-                      color: "#fbbf24",
-                      lineHeight: 1.4,
-                    }}>
-                      {anos !== null
-                        ? `AGRADECEMOS POR MAIS UM ANO JUNTO DA EQUIPE IMPLATEC — ${anos} ${anos === 1 ? "ANO" : "ANOS"} DE DEDICAÇÃO`
-                        : "AGRADECEMOS POR MAIS UM ANO JUNTO DA EQUIPE IMPLATEC"}
-                    </p>
-                    <p className="font-medium mt-1"
-                      style={{ color: "rgba(255,255,255,0.5)", fontSize: "clamp(0.75rem, 1vw, 0.9rem)" }}>
-                      Admissão: {formatarDataCompleta(p.admissao)}
-                    </p>
-                  </div>
+                  <article key={`n-${p.nome}`} className="tv-person-card tv-person-card--birthday rounded-2xl min-w-0" style={{ animationDelay: `${index * 90}ms` }}>
+                    <div className={`tv-event-pill ${proximidade === "Hoje!" ? "tv-event-pill--today" : ""}`}>
+                      {proximidade}
+                    </div>
+                    <div className="tv-person-card-main">
+                      <div className="tv-avatar tv-avatar--birthday">{iniciaisNome(p.nome)}</div>
+                      <div className="min-w-0 flex-1">
+                        <p className="tv-person-name font-black text-white leading-tight" style={{ fontSize: "clamp(1rem, 1.55vw, 1.4rem)" }}>{p.nome}</p>
+                        <p className="font-semibold mt-1" style={{ color: "#f9a8d4", fontSize: "clamp(0.68rem, 0.9vw, 0.82rem)" }}>Feliz aniversário!</p>
+                      </div>
+                    </div>
+                    <div className="tv-card-footer">
+                      <CalendarDays size={15} />
+                      <span>Dia {formatarDataBR(p.nascimento)}</span>
+                    </div>
+                  </article>
                 );
               })}
             </div>
-          </div>
+          </section>
         )}
 
-      </div>
+        {tempoCasa.length > 0 && (
+          <section className="tv-celebration-panel tv-celebration-panel--career flex flex-col min-h-0 rounded-3xl p-4">
+            <div className="tv-panel-heading flex items-center justify-between gap-3 mb-3 flex-shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="tv-panel-icon tv-panel-icon--career"><Trophy size={22} /></span>
+                <div className="min-w-0">
+                  <p className="uppercase tracking-[0.16em] font-bold" style={{ color: "#fbbf24", fontSize: "clamp(0.62rem, 0.85vw, 0.78rem)" }}>Tempo de casa</p>
+                  <h3 className="font-black text-white leading-tight" style={{ fontSize: "clamp(1.05rem, 1.6vw, 1.45rem)" }}>Uma história construída juntos</h3>
+                </div>
+              </div>
+              <span className="tv-panel-count tv-panel-count--career">{tempoCasa.length}</span>
+            </div>
 
-      <div style={{
-        height: 3, flexShrink: 0,
-        background: totalAmbos > 0
-          ? "linear-gradient(90deg, #ec4899, #a855f7, #fbbf24, transparent)"
-          : "linear-gradient(90deg, #ec4899, #a855f7, transparent)",
-      }} />
+            <div className={`tv-celebration-cards grid flex-1 min-h-0 gap-3 ${tempoCasa.length === 1 ? "tv-celebration-cards--solo" : ""}`}>
+              {tempoCasa.map((p, index) => {
+                const anos = anosDeCasa(p.admissao);
+                const proximidade = proximidadeDoEvento(p.admissao, agora);
+                return (
+                  <article key={`t-${p.nome}`} className="tv-person-card tv-person-card--career rounded-2xl min-w-0" style={{ animationDelay: `${(nascimento.length + index) * 90}ms` }}>
+                    <div className={`tv-event-pill tv-event-pill--career ${proximidade === "Hoje!" ? "tv-event-pill--today" : ""}`}>
+                      {proximidade}
+                    </div>
+                    <div className="tv-person-card-main">
+                      <div className="tv-avatar tv-avatar--career">{iniciaisNome(p.nome)}</div>
+                      <div className="min-w-0 flex-1">
+                        <p className="tv-person-name font-black text-white leading-tight" style={{ fontSize: "clamp(0.95rem, 1.45vw, 1.3rem)" }}>{p.nome}</p>
+                        {anos !== null && (
+                          <div className="flex items-baseline gap-1 mt-1" style={{ color: "#fbbf24" }}>
+                            <span className="font-black font-mono tabular-nums leading-none" style={{ fontSize: "clamp(1.6rem, 2.7vw, 2.5rem)" }}>{anos}</span>
+                            <span className="font-bold" style={{ fontSize: "clamp(0.68rem, 0.9vw, 0.82rem)" }}>{anos === 1 ? "ano" : "anos"} de história</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="tv-card-footer tv-card-footer--career">
+                      <CalendarDays size={15} />
+                      <span>Desde {formatarDataCompleta(p.admissao)}</span>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        )}
+      </main>
+
+      <div className="flex-shrink-0" style={{ height: 3, background: "linear-gradient(90deg, #ec4899, #a855f7 48%, #fbbf24, transparent)" }} />
     </div>
   );
 }
-
 // ─── Sub-componente: Slide de Imagem ──────────────────────────────────────────
 
 interface SlideImagemProps {
@@ -999,21 +1008,239 @@ export default function ModoTV({ tvState }: ModoTVProps) {
           from { opacity: 0; }
           to   { opacity: 1; }
         }
+        @keyframes celebrationCardIn {
+          from { opacity: 0; transform: translateY(18px) scale(0.98); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes celebrationFloat {
+          0%, 100% { transform: translate3d(0, 0, 0); }
+          50% { transform: translate3d(0, -16px, 0); }
+        }
+        @keyframes celebrationPulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(244, 114, 182, 0.25); }
+          50% { box-shadow: 0 0 0 8px rgba(244, 114, 182, 0); }
+        }
+        .tv-celebration-gradient-text {
+          background: linear-gradient(110deg, #f9a8d4, #d8b4fe 52%, #fde68a);
+          background-clip: text;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+        .tv-celebration-orb {
+          position: absolute;
+          border-radius: 999px;
+          pointer-events: none;
+          filter: blur(2px);
+          animation: celebrationFloat 7s ease-in-out infinite;
+        }
+        .tv-celebration-orb--one {
+          width: 140px;
+          height: 140px;
+          left: -55px;
+          top: 32%;
+          background: radial-gradient(circle, rgba(236,72,153,0.16), transparent 68%);
+        }
+        .tv-celebration-orb--two {
+          width: 190px;
+          height: 190px;
+          right: -70px;
+          bottom: 2%;
+          background: radial-gradient(circle, rgba(251,191,36,0.11), transparent 68%);
+          animation-delay: -3.5s;
+        }
         .tv-birthday-content--split {
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
         .tv-birthday-content--single {
-          grid-template-columns: minmax(0, 920px);
+          grid-template-columns: minmax(0, 960px);
           justify-content: center;
         }
         .tv-celebration-panel {
-          background: rgba(20, 10, 40, 0.42);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          box-shadow: 0 18px 50px rgba(15, 8, 35, 0.22);
+          position: relative;
+          overflow: hidden;
+          background: linear-gradient(145deg, rgba(28,15,48,0.86), rgba(20,12,39,0.68));
+          border: 1px solid rgba(255,255,255,0.1);
+          box-shadow: 0 22px 60px rgba(7,4,20,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
+          backdrop-filter: blur(14px);
+        }
+        .tv-celebration-panel::before {
+          content: "";
+          position: absolute;
+          inset: 0 0 auto 0;
+          height: 2px;
+          opacity: 0.9;
+        }
+        .tv-celebration-panel--birthday::before {
+          background: linear-gradient(90deg, #ec4899, #c084fc, transparent 88%);
+        }
+        .tv-celebration-panel--career::before {
+          background: linear-gradient(90deg, #fbbf24, #f59e0b, transparent 88%);
+        }
+        .tv-panel-icon {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 42px;
+          height: 42px;
+          flex: 0 0 42px;
+          border-radius: 13px;
+        }
+        .tv-panel-icon--birthday {
+          color: #f9a8d4;
+          background: rgba(236,72,153,0.14);
+          border: 1px solid rgba(236,72,153,0.24);
+        }
+        .tv-panel-icon--career {
+          color: #fbbf24;
+          background: rgba(251,191,36,0.12);
+          border: 1px solid rgba(251,191,36,0.22);
+        }
+        .tv-panel-count {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 34px;
+          height: 34px;
+          padding: 0 10px;
+          border-radius: 999px;
+          color: #f9a8d4;
+          background: rgba(236,72,153,0.12);
+          border: 1px solid rgba(236,72,153,0.2);
+          font: 800 clamp(0.78rem, 1vw, 0.9rem) ui-monospace, monospace;
+        }
+        .tv-panel-count--career {
+          color: #fde68a;
+          background: rgba(251,191,36,0.1);
+          border-color: rgba(251,191,36,0.18);
         }
         .tv-celebration-cards {
-          grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr));
+          grid-template-columns: repeat(auto-fit, minmax(min(195px, 100%), 1fr));
           grid-auto-rows: minmax(0, 1fr);
+        }
+        .tv-celebration-cards--solo .tv-person-card {
+          align-items: center;
+          padding: clamp(1.25rem, 2.5vw, 2.25rem);
+          text-align: center;
+        }
+        .tv-celebration-cards--solo .tv-person-card-main {
+          flex-direction: column;
+        }
+        .tv-celebration-cards--solo .tv-avatar {
+          width: clamp(70px, 7vw, 92px);
+          height: clamp(70px, 7vw, 92px);
+          flex-basis: clamp(70px, 7vw, 92px);
+          border-radius: 24px;
+          font-size: clamp(1.15rem, 1.8vw, 1.5rem);
+        }
+        .tv-celebration-cards--solo .tv-person-name {
+          font-size: clamp(1.35rem, 2.35vw, 2rem) !important;
+        }
+        .tv-celebration-cards--solo .tv-card-footer {
+          margin-left: auto;
+          margin-right: auto;
+        }        .tv-person-card {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          min-height: 0;
+          overflow: hidden;
+          padding: clamp(0.75rem, 1.25vw, 1rem);
+          opacity: 0;
+          animation: celebrationCardIn 0.65s cubic-bezier(0.16,1,0.3,1) forwards;
+        }
+        .tv-person-card--birthday {
+          background: linear-gradient(145deg, rgba(236,72,153,0.16), rgba(126,34,206,0.08));
+          border: 1px solid rgba(244,114,182,0.25);
+        }
+        .tv-person-card--career {
+          background: linear-gradient(145deg, rgba(251,191,36,0.14), rgba(180,83,9,0.07));
+          border: 1px solid rgba(251,191,36,0.22);
+        }
+        .tv-person-card-main {
+          display: flex;
+          align-items: center;
+          gap: clamp(0.65rem, 1.1vw, 0.95rem);
+          min-width: 0;
+          padding-right: 2px;
+        }
+        .tv-avatar {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: clamp(46px, 4.8vw, 62px);
+          height: clamp(46px, 4.8vw, 62px);
+          flex: 0 0 clamp(46px, 4.8vw, 62px);
+          border-radius: 18px;
+          color: white;
+          font-weight: 900;
+          font-size: clamp(0.9rem, 1.3vw, 1.15rem);
+          letter-spacing: 0.04em;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 10px 24px rgba(0,0,0,0.18);
+        }
+        .tv-avatar--birthday {
+          background: linear-gradient(145deg, #ec4899, #9333ea);
+        }
+        .tv-avatar--career {
+          background: linear-gradient(145deg, #f59e0b, #b45309);
+        }
+        .tv-event-pill {
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          max-width: 42%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          padding: 4px 8px;
+          border-radius: 999px;
+          color: #fbcfe8;
+          background: rgba(236,72,153,0.13);
+          border: 1px solid rgba(236,72,153,0.2);
+          font-size: clamp(0.58rem, 0.78vw, 0.72rem);
+          font-weight: 800;
+        }
+        .tv-event-pill--career {
+          color: #fde68a;
+          background: rgba(251,191,36,0.1);
+          border-color: rgba(251,191,36,0.18);
+        }
+        .tv-event-pill--today {
+          color: white;
+          animation: celebrationPulse 1.8s ease-in-out infinite;
+        }
+        .tv-card-footer {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          width: fit-content;
+          max-width: 100%;
+          margin-top: clamp(0.45rem, 0.8vw, 0.7rem);
+          padding: 5px 9px;
+          border-radius: 9px;
+          color: rgba(255,255,255,0.58);
+          background: rgba(6,3,16,0.2);
+          font-size: clamp(0.62rem, 0.82vw, 0.76rem);
+          font-weight: 650;
+          white-space: nowrap;
+        }
+        .tv-card-footer--career {
+          color: rgba(254,243,199,0.65);
+        }
+        .tv-birthday-content--dense .tv-celebration-panel {
+          padding: 0.75rem;
+        }
+        .tv-birthday-content--dense .tv-celebration-cards {
+          gap: 0.55rem;
+        }
+        .tv-birthday-content--dense .tv-person-card {
+          padding: 0.65rem;
+        }
+        .tv-birthday-content--dense .tv-avatar {
+          width: 44px;
+          height: 44px;
+          flex-basis: 44px;
+          border-radius: 14px;
         }
         @media (max-width: 900px) {
           .tv-birthday-content--split {
@@ -1021,19 +1248,54 @@ export default function ModoTV({ tvState }: ModoTVProps) {
             grid-template-rows: repeat(2, minmax(0, 1fr));
           }
           .tv-celebration-panel {
-            padding: 0.75rem;
+            padding: 0.7rem;
           }
           .tv-celebration-cards {
-            grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(min(175px, 100%), 1fr));
+          }
+          .tv-panel-heading {
+            margin-bottom: 0.5rem;
+          }
+          .tv-person-card {
+            padding: 0.6rem;
+          }
+          .tv-avatar {
+            width: 42px;
+            height: 42px;
+            flex-basis: 42px;
+            border-radius: 13px;
+          }
+          .tv-card-footer {
+            margin-top: 0.35rem;
           }
         }
         @media (max-height: 650px) {
-          .tv-birthday-content {
-            padding-top: 0.5rem;
-            padding-bottom: 0.75rem;
+          .tv-celebration-header {
+            padding-top: 0.7rem;
           }
-          .tv-celebration-panel {
-            padding: 0.65rem;
+          .tv-celebration-subtitle {
+            display: none;
+          }
+          .tv-birthday-content {
+            padding-top: 0.45rem;
+            padding-bottom: 0.65rem;
+          }
+          .tv-panel-icon {
+            width: 34px;
+            height: 34px;
+            flex-basis: 34px;
+            border-radius: 10px;
+          }
+          .tv-person-card {
+            padding: 0.55rem;
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .tv-person-card,
+          .tv-celebration-orb,
+          .tv-event-pill--today {
+            animation: none;
+            opacity: 1;
           }
         }
       `}</style>
