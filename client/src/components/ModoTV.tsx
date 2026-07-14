@@ -531,6 +531,7 @@ function SlideAniversariantes() {
   });
 
   const totalAmbos = nascimento.length + tempoCasa.length;
+  const temDuasSecoes = nascimento.length > 0 && tempoCasa.length > 0;
 
   return (
     <div className="flex flex-col w-full h-full overflow-hidden relative" style={{ background: "linear-gradient(135deg, #1a1030 0%, #2d1b4e 30%, #4a2a7a 60%, #1a1a3e 100%)" }}>
@@ -573,12 +574,12 @@ function SlideAniversariantes() {
         </div>
       </div>
 
-      <div className="relative z-10 flex-1 flex flex-col overflow-y-auto px-10 pb-6 gap-5 min-h-0">
+      <div className={`tv-birthday-content relative z-10 flex-1 min-h-0 grid px-8 pt-4 pb-5 gap-4 ${temDuasSecoes ? "tv-birthday-content--split" : "tv-birthday-content--single"}`}>
 
         {/* ─── Seção: Aniversário de Nascimento ────────────────────────────── */}
         {nascimento.length > 0 && (
-          <div>
-            <div className="flex items-center gap-3 mb-4">
+          <div className="tv-celebration-panel flex flex-col min-h-0 rounded-3xl p-4">
+            <div className="flex items-center gap-3 mb-3 flex-shrink-0">
               <span className="text-3xl">🎂</span>
               <span className="font-black" style={{
                 fontSize: "clamp(1.2rem, 2vw, 1.8rem)",
@@ -589,20 +590,19 @@ function SlideAniversariantes() {
                 Aniversário de Nascimento
               </span>
             </div>
-            <div className="flex flex-wrap gap-4">
+            <div className="tv-celebration-cards grid flex-1 min-h-0 gap-3">
               {nascimento.map((p) => (
-                <div key={`n-${p.nome}`} className="rounded-2xl px-6 py-5 text-center flex-1"
+                <div key={`n-${p.nome}`} className="rounded-2xl px-4 py-3 text-center flex flex-col justify-center min-w-0"
                   style={{
-                    minWidth: 280,
                     background: "linear-gradient(135deg, rgba(236,72,153,0.18), rgba(236,72,153,0.08))",
                     border: "1px solid rgba(236,72,153,0.3)",
                   }}>
                   <p className="font-black text-white leading-tight"
-                    style={{ fontSize: "clamp(1.5rem, 2.5vw, 2.2rem)" }}>
+                    style={{ fontSize: "clamp(1.1rem, 1.8vw, 1.7rem)" }}>
                     {p.nome}
                   </p>
-                  <p className="font-semibold mt-3" style={{
-                    fontSize: "clamp(0.85rem, 1.3vw, 1.1rem)",
+                  <p className="font-semibold mt-2" style={{
+                    fontSize: "clamp(0.72rem, 1vw, 0.9rem)",
                     color: "#f9a8d4",
                     lineHeight: 1.4,
                   }}>
@@ -610,7 +610,7 @@ function SlideAniversariantes() {
                   </p>
                   <p className="font-medium mt-1"
                     style={{ color: "rgba(255,255,255,0.5)", fontSize: "clamp(0.75rem, 1vw, 0.9rem)" }}>
-                    {formatarDataCompleta(p.nascimento)}
+                    Dia {formatarDataBR(p.nascimento)}
                   </p>
                 </div>
               ))}
@@ -620,8 +620,8 @@ function SlideAniversariantes() {
 
         {/* ─── Seção: Tempo de Casa ──────────────────────────────────────── */}
         {tempoCasa.length > 0 && (
-          <div>
-            <div className="flex items-center gap-3 mb-4">
+          <div className="tv-celebration-panel flex flex-col min-h-0 rounded-3xl p-4">
+            <div className="flex items-center gap-3 mb-3 flex-shrink-0">
               <span className="text-3xl">🏆</span>
               <span className="font-black" style={{
                 fontSize: "clamp(1.2rem, 2vw, 1.8rem)",
@@ -632,22 +632,21 @@ function SlideAniversariantes() {
                 Tempo de Casa
               </span>
             </div>
-            <div className="flex flex-wrap gap-4">
+            <div className="tv-celebration-cards grid flex-1 min-h-0 gap-3">
               {tempoCasa.map((p) => {
                 const anos = anosDeCasa(p.admissao);
                 return (
-                  <div key={`t-${p.nome}`} className="rounded-2xl px-6 py-5 text-center flex-1"
+                  <div key={`t-${p.nome}`} className="rounded-2xl px-4 py-3 text-center flex flex-col justify-center min-w-0"
                     style={{
-                      minWidth: 280,
                       background: "linear-gradient(135deg, rgba(251,191,36,0.18), rgba(251,191,36,0.08))",
                       border: "1px solid rgba(251,191,36,0.3)",
                     }}>
                     <p className="font-black text-white leading-tight"
-                      style={{ fontSize: "clamp(1.5rem, 2.5vw, 2.2rem)" }}>
+                      style={{ fontSize: "clamp(1.1rem, 1.8vw, 1.7rem)" }}>
                       {p.nome}
                     </p>
-                    <p className="font-semibold mt-3" style={{
-                      fontSize: "clamp(0.8rem, 1.2vw, 1rem)",
+                    <p className="font-semibold mt-2" style={{
+                      fontSize: "clamp(0.72rem, 1vw, 0.9rem)",
                       color: "#fbbf24",
                       lineHeight: 1.4,
                     }}>
@@ -949,7 +948,7 @@ export default function ModoTV({ tvState }: ModoTVProps) {
   return (
     <div className="fixed inset-0 z-[9999] flex flex-col overflow-hidden" style={{ background: "#111827" }}>
 
-      <div key={fadeKey} className="flex-1 relative" style={{ animation: "tvFadeIn 0.7s cubic-bezier(0.16,1,0.3,1)" }}>
+      <div key={fadeKey} className="flex-1 min-h-0 overflow-hidden relative" style={{ animation: "tvFadeIn 0.7s cubic-bezier(0.16,1,0.3,1)" }}>
         {tipoSlide === "dashboard" ? (
           <SlideDashboard />
         ) : tipoSlide === "clima" ? (
@@ -999,6 +998,43 @@ export default function ModoTV({ tvState }: ModoTVProps) {
         @keyframes tvFadeIn {
           from { opacity: 0; }
           to   { opacity: 1; }
+        }
+        .tv-birthday-content--split {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .tv-birthday-content--single {
+          grid-template-columns: minmax(0, 920px);
+          justify-content: center;
+        }
+        .tv-celebration-panel {
+          background: rgba(20, 10, 40, 0.42);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          box-shadow: 0 18px 50px rgba(15, 8, 35, 0.22);
+        }
+        .tv-celebration-cards {
+          grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr));
+          grid-auto-rows: minmax(0, 1fr);
+        }
+        @media (max-width: 900px) {
+          .tv-birthday-content--split {
+            grid-template-columns: 1fr;
+            grid-template-rows: repeat(2, minmax(0, 1fr));
+          }
+          .tv-celebration-panel {
+            padding: 0.75rem;
+          }
+          .tv-celebration-cards {
+            grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+          }
+        }
+        @media (max-height: 650px) {
+          .tv-birthday-content {
+            padding-top: 0.5rem;
+            padding-bottom: 0.75rem;
+          }
+          .tv-celebration-panel {
+            padding: 0.65rem;
+          }
         }
       `}</style>
     </div>

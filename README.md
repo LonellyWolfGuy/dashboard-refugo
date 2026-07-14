@@ -1,6 +1,6 @@
-# 📊 Dashboard de Controle de Refugo — V2 (Modernizado por Thiago Fischer)
+# 📊 Dashboard de Controle de Refugo — V2.3
 
-> **Status: 🟢 Versão 2.2 Estável** (Junho 2026)
+> **Status: 🟢 Versão 2.3 Estável** (Julho 2026)
 
 [![Deploy on Vercel](https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel)](https://vercel.com)
 [![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?logo=supabase)](https://supabase.com)
@@ -21,7 +21,7 @@ Sistema web para controle e análise de refugo industrial. Permite lançar regis
 - **Optimistic Updates** — Sincronização instantânea na UI; registros aparecem, editam e somem da tela no exato momento do clique, com tratamento de erro e rollback automático. (Implementado por Thiago Fischer)
 - **Performance de Elite** — Memoização profunda de estados derivados e processamento de meses, garantindo fluidez mesmo com centenas de registros. (Implementado por Thiago Fischer)
 - **Modo TV** — Modo de exibição em tela cheia para TV industrial com 5 tipos de slide: dashboard com métricas animadas, clima (Open-Meteo), aniversariantes do mês, imagens do mural e vídeos (MP4 direto ou YouTube). Ciclo automático com progresso visual. (Implementado por Thiago Fischer)
-- **Slide de Aniversariantes** — Exibe aniversariantes do mês corrente com design festivo; pula automaticamente se não houver dados. (Implementado por Thiago Fischer)
+- **Slide de Aniversariantes Responsivo** — Organiza aniversários e marcos de tempo de casa em painéis adaptáveis, sem rolagem ou conteúdo cortado em TVs e telas menores; pula automaticamente se não houver dados. (Implementado por Thiago Fischer)
 - **Slide de Clima** — Previsão do tempo para Joinville via Open-Meteo (gratuito, sem chave de API) com temperatura atual e previsão de 3 dias. (Implementado por Thiago Fischer)
 - **Mural de Imagens** — Upload e gerenciamento de slides (JPG/PNG/WEBP) via Supabase Storage para exibição no Modo TV. (Implementado por Thiago Fischer)
 
@@ -185,7 +185,7 @@ O Vercel republica automaticamente a cada push no GitHub em 1–2 minutos.
 ### Instalação
 
 ```bash
-git clone https://github.com/seu-usuario/dashboard-refugo.git
+git clone https://github.com/LonellyWolfGuy/dashboard-refugo.git
 cd dashboard-refugo
 pnpm install
 cp .env.example .env.local
@@ -253,11 +253,28 @@ Botão **Modo TV** no cabeçalho ativa um slideshow fullscreen para exibição e
 
 1. **Dashboard** — % de refugo como métrica principal em fonte gigante, arco SVG de progresso, contagem animada (count-up), produção e refugo totais, comparação com mês anterior, indicador de status (dentro da meta / atenção / crítico)
 2. **Clima** — Temperatura e condições atuais de Joinville com previsão para 3 dias via Open-Meteo (gratuito, sem chave de API)
-3. **Aniversariantes** — Lista dos aniversariantes do mês corrente com design festivo. Pula automaticamente se não houver dados no mês
+3. **Aniversariantes** — Aniversários e marcos de tempo de casa do mês corrente, distribuídos em painéis e cartões responsivos. Pula automaticamente se não houver dados no mês
 4. **Imagens do Mural** — Fotos enviadas via configurações com título e legenda
 5. **Vídeos** — Reprodução automática de vídeos MP4 diretos ou do YouTube com título e legenda. Avança automaticamente ao final do vídeo
 
-O tempo de exibição de cada slide é configurável (dashboard, imagens e vídeos). Navegação manual por clique ou seta, ESC para sair.
+O tempo de exibição de dashboard, imagens e vídeos é configurável. Os slides de clima e aniversariantes permanecem por 20 segundos. A navegação manual pode ser feita pelo controle de próximo slide; pressione `Esc` para sair.
+
+#### Aniversariantes: comportamento e manutenção
+
+- O slide usa o mês do relógio do dispositivo que está exibindo o Modo TV.
+- Aniversários de nascimento e aniversários de admissão aparecem em painéis separados quando ambos existem.
+- Os cartões são distribuídos automaticamente em colunas e linhas para permanecer dentro da área visível, sem depender de rolagem.
+- Em telas com até 900 px de largura, os painéis são reorganizados verticalmente; alturas abaixo de 650 px recebem espaçamento compacto.
+- A data de nascimento exibida contém apenas dia e mês. A data completa permanece somente na fonte de dados.
+- Se o mês não tiver aniversários nem marcos de tempo de casa, o slide é omitido do ciclo.
+
+Os colaboradores são mantidos no array `ANIVERSARIANTES`, em `client/src/lib/initialData.ts`:
+
+```typescript
+{ nome: "Nome do colaborador", nascimento: "DD/MM/AAAA", admissao: "DD/MM/AAAA" }
+```
+
+Quando a data de admissão não estiver disponível, use `"—"`. Após alterar a lista, execute `pnpm check` e `pnpm build` antes de publicar.
 
 ### Botão Sair
 
@@ -440,7 +457,7 @@ MIT © Implatec Perfis Plásticos
 
 ## 🛠️ Créditos e Desenvolvimento
 
-Esta versão modernizada (V2) foi concebida e implementada por **Thiago Fischer**, focando na robustez industrial, suporte temporal dinâmico e excelência em UX.
+Este projeto e suas evoluções são de autoria de **Thiago Fischer**, com foco em robustez industrial, suporte temporal dinâmico e excelência em UX.
 
 ---
 
