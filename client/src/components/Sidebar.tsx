@@ -35,7 +35,7 @@ export default function Sidebar({ onOpenSettings }: SidebarProps) {
         <img 
           src="/logo.png" 
           alt="Implatec" 
-          className="h-12 w-auto mb-2"
+          className="h-12 w-auto max-w-full object-contain mb-2"
         />
         <p className="text-xs font-semibold text-green-700 leading-tight">CONTROLE DE</p>
         <p className="text-xs font-bold text-green-700 leading-tight">REFUGO {anoAtual}</p>
