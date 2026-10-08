@@ -12,18 +12,18 @@ Sistema web para controle e análise de refugo industrial. Permite lançar regis
 
 ---
 
-## 🚀 Novidades da Versão Atual (V2)
+## 🚀 Novidades da Versão Atual (V2.4 — Outubro 2026)
 
-- **Ano Dinâmico** — Fim da amarra ao ano de 2026. O sistema identifica o ano nativamente. (Implementado por Thiago Fischer)
-- **UX Premium** — Diálogos de confirmação Shadcn/UI para operações sensíveis e layout de cards responsivos para dispositivos móveis. (Implementado por Thiago Fischer)
-- **Arquitetura 100% Supabase** — Remoção completa de dados "seed" locais.
-- **Segurança Reforçada (RLS)** — Implantação de _Row Level Security_ para blindar acessos indevidos a dados de outras sessões (quando no Supabase).
-- **Optimistic Updates** — Sincronização instantânea na UI; registros aparecem, editam e somem da tela no exato momento do clique, com tratamento de erro e rollback automático. (Implementado por Thiago Fischer)
-- **Performance de Elite** — Memoização profunda de estados derivados e processamento de meses, garantindo fluidez mesmo com centenas de registros. (Implementado por Thiago Fischer)
-- **Modo TV** — Modo de exibição em tela cheia para TV industrial com 5 tipos de slide: dashboard com métricas animadas, clima (Open-Meteo), aniversariantes do mês, imagens do mural e vídeos (MP4 direto ou YouTube). Ciclo automático com progresso visual. (Implementado por Thiago Fischer)
-- **Slide de Aniversariantes Responsivo** — Organiza aniversários e marcos de tempo de casa em painéis adaptáveis, sem rolagem ou conteúdo cortado em TVs e telas menores; pula automaticamente se não houver dados. (Implementado por Thiago Fischer)
-- **Slide de Clima** — Previsão do tempo para Joinville via Open-Meteo (gratuito, sem chave de API) com temperatura atual e previsão de 3 dias. (Implementado por Thiago Fischer)
-- **Mural de Imagens** — Upload e gerenciamento de slides (JPG/PNG/WEBP) via Supabase Storage para exibição no Modo TV. (Implementado por Thiago Fischer)
+- **Coleta Automática do TOTVS Protheus** — Módulo autônomo em Node.js que conecta diretamente ao SQL Server do Protheus (`SBC010`, `SD3010`, `SB1010`, `SX5010`), eliminando a necessidade de lançamentos manuais.
+- **Sincronização em 2 Turnos Diários (07:00 e 18:00)** — Coleta às 07:00 para consolidar o fechamento do turno da noite e às 18:00 para o expediente diurno, com script PowerShell para agendamento automático no Windows Task Scheduler.
+- **Categorização Automática de Motivos** — Captura e agrupa os motivos reais de refugo cadastrados na tabela SX5 (ex: `REFUGO PRODUCAO`, `REFUGO PRODUCAO CRISTAL`, `BORRA`) com pesos exatos em Kg para os gráficos de Pareto e Pizza.
+- **Notificações por E-mail (cPanel SMTP)** — Envio automático de relatório formatado em HTML com indicadores de Produção, Refugo e tabela detalhada de motivos para múltiplos destinatários (PCP, Vendas e TI).
+- **Badge de Status em Tempo Real** — Indicador visual no cabeçalho do Dashboard com ponto verde pulsante e tooltip detalhado exibindo a data, hora e status da última coleta do Protheus.
+- **Histórico de Logs em Disco** — Rotação automática de logs por dia (`logs/sync-AAAA-MM-DD.log`) e log contínuo (`sync.log`) no servidor.
+- **Ano Dinâmico** — O sistema identifica o ano nativamente sem amarras fixas.
+- **UX Premium** — Diálogos de confirmação Shadcn/UI para operações sensíveis e layout de cards responsivos para dispositivos móveis.
+- **Arquitetura 100% Supabase** — Persistência instantânea, Row Level Security (RLS) e atualização em tempo real.
+- **Modo TV** — Modo de exibição em tela cheia para TV industrial com slideshow automático (dashboard, clima, aniversariantes, mural e vídeos).
 
 ---
 

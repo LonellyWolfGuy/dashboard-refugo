@@ -67,4 +67,38 @@ Para cadastrar os dois horários automaticamente no Windows Task Scheduler, abra
 ```powershell
 .\agendar-tarefa.ps1
 ```
-A tarefa executará todos os dias às **07:00** e às **18:00**, gravando o histórico de execuções em `sync.log`.
+A tarefa executará todos os dias às **07:00** e às **18:00**, gravando o histórico de execuções em `sync.log` e na pasta `logs/sync-AAAA-MM-DD.log`.
+
+---
+
+## 📧 Notificação por E-mail (cPanel SMTP)
+
+A cada sincronização concluída, um e-mail com layout corporativo HTML é enviado aos destinatários configurados contendo:
+* Cards de Produção, Refugo e % de Refugo.
+* Tabela completa com o detalhamento dos motivos reais e seus pesos em Kg.
+* Data/hora e confirmação de gravação no Supabase.
+
+### Configuração no `.env`:
+```env
+EMAIL_NOTIFICACAO_ATIVA=true
+SMTP_HOST=mail.implatec.com.br
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=thiago.gti@implatec.com.br
+SMTP_PASSWORD="sua_senha"
+EMAIL_REMETENTE=thiago.gti@implatec.com.br
+EMAIL_DESTINATARIO=thiago.gti@implatec.com.br, vendas@implatec.com.br, pcp@implatec.com.br
+```
+
+### Testar Envio de E-mail:
+```bash
+node sync.js --test-email
+```
+
+---
+
+## 🟢 Badge de Status no Dashboard Web
+
+O script grava o carimbo da última execução na tabela `config` do Supabase. O Dashboard web exibe automaticamente no cabeçalho um badge em tempo real com indicador pulsante:
+* Exemplo: `🟢 Protheus: Hoje às 18:00`
+* Ao passar o mouse, exibe o tooltip completo com totais, status e horários agendados.
