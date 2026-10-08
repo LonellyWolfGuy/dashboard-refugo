@@ -102,6 +102,13 @@ dashboard-refugo/
 │           ├── Home.tsx                # Página principal (dashboard)
 │           ├── LoginPage.tsx           # Tela de login
 │           └── NotFound.tsx            # Página 404
+├── scripts/
+│   └── sync-protheus/                 # Integração automática Protheus (SQL Server) -> Supabase
+│       ├── sync.js                    # Script de sincronização automática (07:00 e 18:00)
+│       ├── query_teste.sql            # Queries SQL de validação no SSMS
+│       ├── agendar-tarefa.ps1         # Script para agendar no Windows Task Scheduler
+│       ├── executar-sync.bat          # Disparador com registro de logs
+│       └── .env.example               # Modelo de credenciais SQL Server + Supabase
 ├── patches/
 │   └── wouter@3.7.1.patch            # Patch do roteador Wouter
 ├── supabase-setup.sql                 # Script SQL para tabelas registros + config

@@ -1,0 +1,18 @@
+{
+  "name": "sync-refugo-protheus",
+  "version": "1.0.0",
+  "description": "Sincronizador automático Protheus (SQL Server) -> Supabase (Dashboard de Refugo)",
+  "main": "sync.js",
+  "type": "module",
+  "scripts": {
+    "sync": "node sync.js",
+    "sync:hoje": "node sync.js",
+    "sync:dry": "node sync.js --dry-run",
+    "test:db": "node sync.js --test-conn"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.4",
+    "dotenv": "^16.4.7",
+    "mssql": "^11.0.1"
+  }
+}
