@@ -6,12 +6,18 @@
  * Consulta dados diários de produção e refugo diretamente no banco do Protheus
  * e sincroniza de forma idempotente com a tabela 'registros' no Supabase.
  *
+ * Recursos adicionais:
+ * - Gravação de logs em arquivo diário (logs/sync-YYYY-MM-DD.log).
+ * - Envio de e-mail de notificação (cPanel SMTP) com resumo da operação.
+ * - Registro do status de última sincronização na tabela 'config' do Supabase.
+ *
  * Uso:
- *   node sync.js                     -> Sincroniza o dia de hoje
+ *   node sync.js                     -> Sincroniza ontem e hoje (07:00 e 18:00)
  *   node sync.js --data 2026-10-07   -> Sincroniza uma data específica
  *   node sync.js --mes 10 --ano 2026 -> Sincroniza todos os dias com movimento no mês
  *   node sync.js --dry-run           -> Apenas consulta e exibe sem gravar no Supabase
  *   node sync.js --test-conn         -> Testa a conexão com o SQL Server
+ *   node sync.js --test-email        -> Envia um e-mail de teste para validar o SMTP cPanel
  * ==============================================================================
  */
 
@@ -21,18 +27,39 @@ import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 import crypto from "crypto";
+import fs from "fs";
+import nodemailer from "nodemailer";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Carrega .env do mesmo diretório
-import fs from "fs";
 const envPath = path.join(__dirname, ".env");
 if (!fs.existsSync(envPath)) {
   console.warn("\x1b[33m[AVISO] Arquivo .env não encontrado em " + envPath + "\x1b[0m");
   console.warn("\x1b[33mCopie o arquivo .env.example para .env e preencha com as credenciais do SQL Server e Supabase.\x1b[0m\n");
 }
 dotenv.config({ path: envPath });
+
+// ─── Gerenciamento de Logs em Arquivo ─────────────────────────────────────────
+const logsDir = path.join(__dirname, "logs");
+if (!fs.existsSync(logsDir)) {
+  try { fs.mkdirSync(logsDir, { recursive: true }); } catch (_) {}
+}
+
+const hojeLogData = new Date().toISOString().slice(0, 10);
+const arquivoLogDia = path.join(logsDir, `sync-${hojeLogData}.log`);
+const arquivoLogGeral = path.join(__dirname, "sync.log");
+
+const bufferLogs = [];
+
+function gravarLinhaArquivo(textoLimpo) {
+  const linhaComData = `[${new Date().toLocaleString("pt-BR")}] ${textoLimpo}\n`;
+  try {
+    fs.appendFileSync(arquivoLogDia, linhaComData, "utf8");
+    fs.appendFileSync(arquivoLogGeral, linhaComData, "utf8");
+  } catch (_) {}
+}
 
 // ─── Cores para Log no Terminal ──────────────────────────────────────────────
 const colors = {
@@ -49,7 +76,13 @@ const colors = {
 
 function log(msg, color = colors.reset) {
   const time = new Date().toLocaleTimeString("pt-BR");
-  console.log(`${colors.dim}[${time}]${colors.reset} ${color}${msg}${colors.reset}`);
+  const consoleLine = `${colors.dim}[${time}]${colors.reset} ${color}${msg}${colors.reset}`;
+  console.log(consoleLine);
+  
+  // Remove códigos ANSI para gravar no arquivo
+  const textoLimpo = msg.replace(/\x1b\[[0-9;]*m/g, "");
+  bufferLogs.push(`[${time}] ${textoLimpo}`);
+  gravarLinhaArquivo(textoLimpo);
 }
 
 // ─── Validação de Variáveis de Ambiente ───────────────────────────────────────
@@ -81,6 +114,7 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABAS
 const args = process.argv.slice(2);
 const isDryRun = args.includes("--dry-run");
 const isTestConn = args.includes("--test-conn");
+const isTestEmail = args.includes("--test-email");
 
 function getArgValue(flag) {
   const idx = args.indexOf(flag);
@@ -93,7 +127,7 @@ const argAno = getArgValue("--ano");   // '2026'
 
 // ─── Conexão com Supabase ────────────────────────────────────────────────────
 let supabase = null;
-if (!isDryRun && !isTestConn) {
+if (!isDryRun && !isTestConn && !isTestEmail) {
   if (!supabaseUrl || !supabaseKey) {
     log("ERRO: Credenciais do Supabase não encontradas no arquivo .env!", colors.red);
     process.exit(1);
@@ -103,7 +137,7 @@ if (!isDryRun && !isTestConn) {
   });
 }
 
-// ─── Função de Teste de Conexão ──────────────────────────────────────────────
+// ─── Função de Teste de Conexão com SQL Server ──────────────────────────────
 async function testConnection() {
   log("Testando conexão com o SQL Server...", colors.cyan);
   try {
@@ -136,6 +170,184 @@ async function testConnection() {
     process.exit(0);
   } catch (err) {
     log(`✗ Falha ao conectar: ${err.message}`, colors.red);
+    process.exit(1);
+  }
+}
+
+// ─── Notificação por E-mail (cPanel SMTP) ───────────────────────────────────
+function criarTransportadorEmail() {
+  const host = process.env.SMTP_HOST || "mail.implatec.com.br";
+  const port = parseInt(process.env.SMTP_PORT || "465", 10);
+  const secure = process.env.SMTP_SECURE !== "false"; // 465 = true, 587 = false
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASSWORD;
+
+  if (!user || !pass) {
+    return null;
+  }
+
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: { user, pass },
+    tls: {
+      rejectUnauthorized: false, // Evita erros com certificados autoassinados/cPanel
+    },
+  });
+}
+
+async function enviarEmailRelatorio(resumo) {
+  if (process.env.EMAIL_NOTIFICACAO_ATIVA !== "true") {
+    return;
+  }
+
+  const transporter = criarTransportadorEmail();
+  if (!transporter) {
+    log("⚠ Envio de e-mail ativo, mas SMTP_USER ou SMTP_PASSWORD não estão preenchidos.", colors.yellow);
+    return;
+  }
+
+  const destinatario = process.env.EMAIL_DESTINATARIO || process.env.SMTP_USER;
+  const remetente = process.env.EMAIL_REMETENTE || process.env.SMTP_USER;
+
+  const dataHoraFormatada = new Date().toLocaleString("pt-BR");
+
+  let htmlMotivos = "";
+  if (resumo.motivos && resumo.motivos.length > 0) {
+    htmlMotivos = `
+      <h3 style="color: #334155; margin-top: 20px; font-size: 15px; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">📋 Detalhamento dos Motivos de Refugo:</h3>
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px;">
+        <thead>
+          <tr style="background-color: #f1f5f9; text-align: left;">
+            <th style="padding: 8px 12px; border-bottom: 1px solid #cbd5e1;">Motivo</th>
+            <th style="padding: 8px 12px; border-bottom: 1px solid #cbd5e1; text-align: right;">Quantidade (Kg)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${resumo.motivos.map(m => `
+            <tr>
+              <td style="padding: 8px 12px; border-bottom: 1px solid #e2e8f0; color: #1e293b;">${m.motivo}</td>
+              <td style="padding: 8px 12px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #b91c1c;">${m.quantidade.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} Kg</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `;
+  }
+
+  const htmlCorpo = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; color: #334155; }
+        .card { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #1e3a8a, #0284c7); padding: 20px; text-align: center; color: white; }
+        .header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: 0.5px; }
+        .header p { margin: 4px 0 0; font-size: 13px; opacity: 0.9; }
+        .content { padding: 24px; }
+        .kpis { display: flex; gap: 12px; margin-bottom: 20px; }
+        .kpi { flex: 1; padding: 14px; border-radius: 8px; background-color: #f8fafc; border: 1px solid #e2e8f0; text-align: center; }
+        .kpi-title { font-size: 11px; text-transform: uppercase; font-weight: 600; color: #64748b; margin-bottom: 4px; }
+        .kpi-value { font-size: 20px; font-weight: 800; }
+        .kpi-prod { color: #059669; }
+        .kpi-ref { color: #dc2626; }
+        .kpi-pct { color: #d97706; }
+        .footer { padding: 16px; background-color: #f1f5f9; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; }
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; background-color: #dcfce7; color: #15803d; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <div class="header">
+          <h1>IMPLATEC — Controle de Refugo</h1>
+          <p>Relatório de Sincronização Automática Protheus</p>
+        </div>
+        <div class="content">
+          <div style="margin-bottom: 16px; text-align: right;">
+            <span class="badge">✓ Sincronizado com Sucesso</span>
+          </div>
+
+          <p style="font-size: 14px; margin-top: 0;">
+            A sincronização dos dados do <strong>Protheus (SQL Server)</strong> para o <strong>Dashboard de Refugo (Supabase)</strong> foi executada com sucesso.
+          </p>
+
+          <table style="width: 100%; margin: 16px 0; border-collapse: separate; border-spacing: 8px;">
+            <tr>
+              <td style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px; text-align: center; width: 33%;">
+                <div style="font-size: 11px; color: #166534; font-weight: 600; text-transform: uppercase;">🏭 Produção</div>
+                <div style="font-size: 18px; font-weight: 800; color: #15803d; margin-top: 4px;">${resumo.producao.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} Kg</div>
+              </td>
+              <td style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; text-align: center; width: 33%;">
+                <div style="font-size: 11px; color: #991b1b; font-weight: 600; text-transform: uppercase;">♻️ Refugo</div>
+                <div style="font-size: 18px; font-weight: 800; color: #b91c1c; margin-top: 4px;">${resumo.refugo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} Kg</div>
+              </td>
+              <td style="background-color: #fffbeb; border: 1px solid #fef3c7; border-radius: 8px; padding: 12px; text-align: center; width: 33%;">
+                <div style="font-size: 11px; color: #92400e; font-weight: 600; text-transform: uppercase;">📊 % Refugo</div>
+                <div style="font-size: 18px; font-weight: 800; color: #d97706; margin-top: 4px;">${resumo.pctRefugo}%</div>
+              </td>
+            </tr>
+          </table>
+
+          ${htmlMotivos}
+
+          <div style="margin-top: 24px; padding: 12px; background-color: #f8fafc; border-left: 4px solid #0284c7; border-radius: 4px; font-size: 12px; color: #475569;">
+            <strong>Data Referência:</strong> ${resumo.data}<br>
+            <strong>Registros Processados:</strong> ${resumo.diasCount || 1} dia(s)<br>
+            <strong>Horário da Execução:</strong> ${dataHoraFormatada}<br>
+            <strong>Ambiente:</strong> Produção (Servidor Protheus)
+          </div>
+        </div>
+        <div class="footer">
+          Dashboard de Refugo Industrial — Implatec &bull; Sincronização automática 07:00 / 18:00
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  try {
+    log(`Enviando e-mail de notificação para ${destinatario}...`, colors.cyan);
+    await transporter.sendMail({
+      from: `"Dashboard Refugo Implatec" <${remetente}>`,
+      to: destinatario,
+      subject: `[IMPLATEC] Refugo Sincronizado - ${resumo.data} (${resumo.pctRefugo}%)`,
+      html: htmlCorpo,
+    });
+    log("✓ E-mail de notificação enviado com sucesso!", colors.green);
+  } catch (err) {
+    log(`⚠ Falha ao enviar e-mail: ${err.message}`, colors.yellow);
+  }
+}
+
+async function testEmail() {
+  log("Testando envio de e-mail via SMTP cPanel...", colors.cyan);
+  const transporter = criarTransportadorEmail();
+  if (!transporter) {
+    log("ERRO: Preencha SMTP_USER e SMTP_PASSWORD no arquivo .env!", colors.red);
+    process.exit(1);
+  }
+
+  const destinatario = process.env.EMAIL_DESTINATARIO || process.env.SMTP_USER;
+  const remetente = process.env.EMAIL_REMETENTE || process.env.SMTP_USER;
+
+  try {
+    await transporter.verify();
+    log("✓ Conexão SMTP autenticada com sucesso!", colors.green);
+
+    await transporter.sendMail({
+      from: `"Teste Dashboard Implatec" <${remetente}>`,
+      to: destinatario,
+      subject: "[TESTE] Conexão SMTP cPanel — Dashboard de Refugo",
+      text: "Este é um e-mail de teste confirmando que a notificação automática do Dashboard de Refugo está funcionando perfeitamente!",
+    });
+
+    log(`✓ E-mail de teste enviado com sucesso para ${destinatario}!`, colors.green);
+    process.exit(0);
+  } catch (err) {
+    log(`✗ Erro ao enviar e-mail de teste: ${err.message}`, colors.red);
     process.exit(1);
   }
 }
@@ -251,9 +463,37 @@ async function sincronizarNoSupabase(registro) {
   }
 }
 
+// ─── Salvar Status de Última Sincronização no Supabase (Badge Dashboard) ─────
+async function salvarUltimaSincronizacao(resumo) {
+  if (isDryRun || !supabase) return;
+
+  try {
+    const { error } = await supabase
+      .from("config")
+      .upsert({
+        chave: "ultima_sincronizacao",
+        valor: {
+          timestamp: new Date().toISOString(),
+          status: "sucesso",
+          data_referencia: resumo.data,
+          producao: resumo.producao,
+          refugo: resumo.refugo,
+          pct_refugo: resumo.pctRefugo,
+          dias_processados: resumo.diasCount || 1,
+        },
+      }, { onConflict: "chave" });
+
+    if (!error) {
+      log("✓ Status de última sincronização gravado na tabela config (Supabase).", colors.dim);
+    }
+  } catch (err) {
+    // Não falha a execução principal se o registro de status falhar
+    log(`⚠ Não foi possível gravar status na tabela config: ${err.message}`, colors.dim);
+  }
+}
+
 // ─── Processar uma Única Data ────────────────────────────────────────────────
 async function processarDia(pool, dataIso) {
-  // dataIso formato 'YYYY-MM-DD'
   const dataProtheus = dataIso.replace(/-/g, ""); // 'YYYYMMDD'
   const [anoStr, mesStr] = dataIso.split("-");
   const ano = parseInt(anoStr, 10);
@@ -287,6 +527,14 @@ async function processarDia(pool, dataIso) {
   };
 
   await sincronizarNoSupabase(payload);
+
+  return {
+    data: dataIso,
+    producao: totalProducao,
+    refugo: totalRefugo,
+    pctRefugo,
+    motivos,
+  };
 }
 
 // ─── Processar Todo um Mês ───────────────────────────────────────────────────
@@ -296,7 +544,6 @@ async function processarMes(pool, mes, ano) {
 
   log(`Buscando todas as datas com movimento no mês ${mesPad}/${ano}...`, colors.cyan);
 
-  // Busca todos os dias que tiveram apontamento em SBC ou SD3
   const queryDias = `
     SELECT DISTINCT DATA FROM (
       SELECT BC_DATA AS DATA FROM SBC${tabelaPrefixo} 
@@ -313,21 +560,32 @@ async function processarMes(pool, mes, ano) {
 
   if (dias.length === 0) {
     log(`Nenhum movimento encontrado para ${mesPad}/${ano}.`, colors.yellow);
-    return;
+    return null;
   }
 
   log(`Encontrados ${dias.length} dia(s) com movimento. Iniciando sincronização...`, colors.green);
 
+  let ultimoResumo = null;
   for (const d of dias) {
     const dataIso = `${d.substring(0, 4)}-${d.substring(4, 6)}-${d.substring(6, 8)}`;
-    await processarDia(pool, dataIso);
+    ultimoResumo = await processarDia(pool, dataIso);
   }
+
+  if (ultimoResumo) {
+    ultimoResumo.diasCount = dias.length;
+  }
+  return ultimoResumo;
 }
 
 // ─── Fluxo Principal ─────────────────────────────────────────────────────────
 async function main() {
   if (isTestConn) {
     await testConnection();
+    return;
+  }
+
+  if (isTestEmail) {
+    await testEmail();
     return;
   }
 
@@ -343,15 +601,15 @@ async function main() {
   const pool = await sql.connect(dbConfig);
   log(`✓ Conectado ao SQL Server Protheus.`, colors.green);
 
+  let resumoFinal = null;
+
   try {
     if (argMes && argAno) {
-      await processarMes(pool, parseInt(argMes, 10), parseInt(argAno, 10));
+      resumoFinal = await processarMes(pool, parseInt(argMes, 10), parseInt(argAno, 10));
     } else {
       if (argData) {
-        await processarDia(pool, argData);
+        resumoFinal = await processarDia(pool, argData);
       } else {
-        // Rotina padrão diária: processa ontem (D-1) e hoje (D-0)
-        // Isso garante que apontamentos noturnos ou do fim do dia sejam sempre atualizados às 07:00 e 18:00
         const hoje = new Date();
         const ontem = new Date(hoje);
         ontem.setDate(ontem.getDate() - 1);
@@ -370,8 +628,16 @@ async function main() {
         await processarDia(pool, dataOntem);
 
         log(`Sincronizando dia atual (${dataHoje})...`, colors.dim);
-        await processarDia(pool, dataHoje);
+        resumoFinal = await processarDia(pool, dataHoje);
+        if (resumoFinal) {
+          resumoFinal.diasCount = 2;
+        }
       }
+    }
+
+    if (resumoFinal) {
+      await salvarUltimaSincronizacao(resumoFinal);
+      await enviarEmailRelatorio(resumoFinal);
     }
 
     log(`==================================================`, colors.green);

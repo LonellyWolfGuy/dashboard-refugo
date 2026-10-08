@@ -15,6 +15,7 @@ import TabelaRegistros from "@/components/TabelaRegistros";
 import ModalConfiguracoes from "@/components/ModalConfiguracoes";
 import AnaliseMotivoRefugo from "@/components/AnaliseMotivoRefugo";
 import ModoTV from "@/components/ModoTV";
+import BadgeSincronizacao from "@/components/BadgeSincronizacao";
 import { useTVMode } from "@/hooks/useTVMode";
 import { Menu, ChevronLeft, ChevronRight, Download, Sun, Moon, Clock, LogOut, Monitor } from "lucide-react";
 import { generateMonthlyPDF } from "@/lib/generatePDF";
@@ -162,6 +163,8 @@ export default function Home() {
                 <Download className="w-4 h-4" />
                 <span className="hidden sm:inline">Exportar PDF</span>
               </button>
+
+              <BadgeSincronizacao />
 
               <RelogioHeader />
 

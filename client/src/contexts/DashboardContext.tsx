@@ -22,6 +22,7 @@ interface DashboardContextType {
   getTotaisMes: (mes: number) => { totalProducao: number; totalRefugo: number; total: number; percentRefugo: number };
   getTotaisAnuais: () => { totalProducao: number; totalRefugo: number; total: number; percentRefugo: number };
   salvarTudo: () => Promise<void>;
+  ultimaSync: refugoService.UltimaSyncInfo | null;
 }
 
 const DashboardContext = createContext<DashboardContextType | null>(null);
@@ -57,7 +58,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     staleTime: Infinity,
   });
 
-  const defaultConfig = useMemo(() => ({ metaRefugo: META_REFUGO_PERCENT, motivos: [] }), []);
+  const defaultConfig = useMemo(() => ({ metaRefugo: META_REFUGO_PERCENT, motivos: [] as string[], ultimaSync: null }), []);
   const mConfig = config || defaultConfig;
   const meses = React.useMemo(() => montarMeses(registros, anoAtual), [registros, anoAtual]);
   const carregando = carregandoRegistros || carregandoConfig;
@@ -196,11 +197,13 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     setMesAtual, setAnoAtual, adicionarRegistro, editarRegistro, excluirRegistro,
     setMetaRefugo, adicionarMotivo, removerMotivo,
     getMesData, getTotaisMes, getTotaisAnuais, salvarTudo,
+    ultimaSync: config?.ultimaSync || null,
   }), [
     meses, mesAtual, anoAtual, mConfig.metaRefugo, mConfig.motivos, carregando,
     setMesAtual, setAnoAtual, adicionarRegistro, editarRegistro, excluirRegistro,
     setMetaRefugo, adicionarMotivo, removerMotivo,
     getMesData, getTotaisMes, getTotaisAnuais, salvarTudo,
+    config?.ultimaSync,
   ]);
 
   return (

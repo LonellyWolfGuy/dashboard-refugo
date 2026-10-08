@@ -69,7 +69,17 @@ export async function deletarRegistro(id: string): Promise<void> {
   if (error) throw new Error(`[Supabase] deletarRegistro: ${error.message}`);
 }
 
-export async function lerConfig(): Promise<{ metaRefugo: number; motivos: string[] }> {
+export interface UltimaSyncInfo {
+  timestamp: string;
+  status: string;
+  data_referencia?: string;
+  producao?: number;
+  refugo?: number;
+  pct_refugo?: string;
+  dias_processados?: number;
+}
+
+export async function lerConfig(): Promise<{ metaRefugo: number; motivos: string[]; ultimaSync: UltimaSyncInfo | null }> {
   const { data, error } = await supabase
     .from("config")
     .select("chave, valor");
@@ -81,6 +91,7 @@ export async function lerConfig(): Promise<{ metaRefugo: number; motivos: string
   return {
     metaRefugo: typeof map.meta_refugo === "number" ? map.meta_refugo : Number(map.meta_refugo ?? META_REFUGO_PERCENT),
     motivos: Array.isArray(map.motivos) ? ordenarMotivos(map.motivos) : ordenarMotivos(MOTIVOS_PADRAO),
+    ultimaSync: map.ultima_sincronizacao || null,
   };
 }
 
