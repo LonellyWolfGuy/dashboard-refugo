@@ -208,7 +208,10 @@ async function enviarEmailRelatorio(resumo) {
     return;
   }
 
-  const destinatario = process.env.EMAIL_DESTINATARIO || process.env.SMTP_USER;
+  const rawDestinatario = process.env.EMAIL_DESTINATARIO || process.env.SMTP_USER;
+  const listaDestinatarios = rawDestinatario
+    ? rawDestinatario.split(",").map((e) => e.trim()).filter(Boolean)
+    : [process.env.SMTP_USER];
   const remetente = process.env.EMAIL_REMETENTE || process.env.SMTP_USER;
 
   const dataHoraFormatada = new Date().toLocaleString("pt-BR");
@@ -309,10 +312,10 @@ async function enviarEmailRelatorio(resumo) {
   `;
 
   try {
-    log(`Enviando e-mail de notificação para ${destinatario}...`, colors.cyan);
+    log(`Enviando e-mail de notificação para ${listaDestinatarios.length} destinatário(s) (${listaDestinatarios.join(", ")})...`, colors.cyan);
     await transporter.sendMail({
       from: `"Dashboard Refugo Implatec" <${remetente}>`,
-      to: destinatario,
+      to: listaDestinatarios,
       subject: `[IMPLATEC] Refugo Sincronizado - ${resumo.data} (${resumo.pctRefugo}%)`,
       html: htmlCorpo,
     });
@@ -330,7 +333,10 @@ async function testEmail() {
     process.exit(1);
   }
 
-  const destinatario = process.env.EMAIL_DESTINATARIO || process.env.SMTP_USER;
+  const rawDestinatario = process.env.EMAIL_DESTINATARIO || process.env.SMTP_USER;
+  const listaDestinatarios = rawDestinatario
+    ? rawDestinatario.split(",").map((e) => e.trim()).filter(Boolean)
+    : [process.env.SMTP_USER];
   const remetente = process.env.EMAIL_REMETENTE || process.env.SMTP_USER;
 
   try {
@@ -339,12 +345,12 @@ async function testEmail() {
 
     await transporter.sendMail({
       from: `"Teste Dashboard Implatec" <${remetente}>`,
-      to: destinatario,
+      to: listaDestinatarios,
       subject: "[TESTE] Conexão SMTP cPanel — Dashboard de Refugo",
-      text: "Este é um e-mail de teste confirmando que a notificação automática do Dashboard de Refugo está funcionando perfeitamente!",
+      text: "Este é um e-mail de teste confirmando que a notificação automática do Dashboard de Refugo está funcionando perfeitamente para todos os destinatários configurados!",
     });
 
-    log(`✓ E-mail de teste enviado com sucesso para ${destinatario}!`, colors.green);
+    log(`✓ E-mail de teste enviado com sucesso para ${listaDestinatarios.join(", ")}!`, colors.green);
     process.exit(0);
   } catch (err) {
     log(`✗ Erro ao enviar e-mail de teste: ${err.message}`, colors.red);
