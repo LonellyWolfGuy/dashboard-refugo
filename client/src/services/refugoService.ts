@@ -79,7 +79,29 @@ export interface UltimaSyncInfo {
   dias_processados?: number;
 }
 
-export async function lerConfig(): Promise<{ metaRefugo: number; motivos: string[]; ultimaSync: UltimaSyncInfo | null }> {
+export interface ProdutoRankingRefugo {
+  ferramentas: string;
+  produto: string;
+  descricao: string;
+  quantidadeProduzida: number;
+  unidade: string;
+  kgProducao: number;
+  kgRefugo: number;
+  rejeicaoPct: number;
+}
+
+export interface RankingProdutosInfo {
+  atualizado_em: string;
+  dias_janela: number;
+  produtos: ProdutoRankingRefugo[];
+}
+
+export async function lerConfig(): Promise<{
+  metaRefugo: number;
+  motivos: string[];
+  ultimaSync: UltimaSyncInfo | null;
+  rankingProdutos: RankingProdutosInfo | null;
+}> {
   const { data, error } = await supabase
     .from("config")
     .select("chave, valor");
@@ -92,6 +114,7 @@ export async function lerConfig(): Promise<{ metaRefugo: number; motivos: string
     metaRefugo: typeof map.meta_refugo === "number" ? map.meta_refugo : Number(map.meta_refugo ?? META_REFUGO_PERCENT),
     motivos: Array.isArray(map.motivos) ? ordenarMotivos(map.motivos) : ordenarMotivos(MOTIVOS_PADRAO),
     ultimaSync: map.ultima_sincronizacao || null,
+    rankingProdutos: map.ranking_produtos_refugo || null,
   };
 }
 

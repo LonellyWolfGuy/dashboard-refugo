@@ -13,6 +13,7 @@ import GraficoAnual from "@/components/GraficoAnual";
 import TabelaRegistros from "@/components/TabelaRegistros";
 import ModalConfiguracoes from "@/components/ModalConfiguracoes";
 import AnaliseMotivoRefugo from "@/components/AnaliseMotivoRefugo";
+import RankingProdutosRefugo from "@/components/RankingProdutosRefugo";
 import ModoTV from "@/components/ModoTV";
 import BadgeSincronizacao from "@/components/BadgeSincronizacao";
 import { useTVMode } from "@/hooks/useTVMode";
@@ -265,7 +266,10 @@ export default function Home() {
           {/* 3. Análise de Motivos de Refugo (Pareto 80/20, Barras, Pizza) */}
           <AnaliseMotivoRefugo />
 
-          {/* 4. Tabela de Registros com Filtros e Exportação Excel */}
+          {/* 4. Ranking Top 10 Produtos & Ferramentas Mais Refugados (Últimos 30 dias - Protheus) */}
+          <RankingProdutosRefugo />
+
+          {/* 5. Tabela de Registros com Filtros e Exportação Excel */}
           <TabelaRegistros />
         </div>
 

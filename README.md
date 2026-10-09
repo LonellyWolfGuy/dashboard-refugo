@@ -12,8 +12,10 @@ Sistema web para controle e análise de refugo industrial. Permite coletar dados
 
 ---
 
-## 🚀 Novidades da Versão Atual (V2.5 — Outubro 2026)
+## 🚀 Novidades da Versão Atual (V2.6 — Outubro 2026)
 
+- **Ranking Top 10 Produtos & Ferramentas Mais Refugados (Últimos 30 dias - Protheus)** — Painel dedicado que consome a consulta oficial do ERP TOTVS Protheus (`SBC010`, `SC2010`, `SD3010`, `SB1010`), exibindo o Top 10 de itens com maior índice de perda (Kg refugo / Kg produzido), códigos das ferramentas/moldes envolvidos, unidades, pesos e barras visuais de severidade.
+- **Sincronização Diária Automatizada (07:00 e 18:00)** — O script `sync.js` agora roda a query analítica de 30 dias automaticamente em segundo plano via Windows Task Scheduler, salva os dados no Supabase e inclui o Top 5 no e-mail corporativo disparado pelo cPanel.
 - **Inteligência Operacional nos KPIs** — Barra de meta visual com cálculo em tempo real de folga ou excedente, micro-tendências comparativas com o mês anterior e faixa de destaques operacionais com **Melhor Dia**, **Dia Crítico** e **Médias Diárias Ativas** de produção e refugo.
 - **Gráfico de Pareto 80/20 nos Motivos de Refugo** — Padrão Lean Six Sigma com colunas decrescentes de Kg, linha de percentual acumulado e marcação na linha de corte de 80%, acompanhado de um card inteligente que resume automaticamente quais motivos concentram 80% das perdas.
 - **Seletor de Abas de Análise** — Alternância rápida entre *Pareto (80/20)*, *Ranking de Barras* e *Distribuição (Pizza)*.
@@ -23,7 +25,6 @@ Sistema web para controle e análise de refugo industrial. Permite coletar dados
 - **Evolução Diária com Taxa de Conformidade** — Pontos no gráfico de linha destacados dinamicamente em verde (dentro da meta) e vermelho (acima da meta), além de indicador da taxa de conformidade mensal (% dos dias aprovados).
 - **Central de Integração Protheus & E-mail** — Modal interativo ao clicar no badge do cabeçalho com status detalhado da conexão com o banco Protheus (SQL Server), Supabase, horários de sincronização (07:00 e 18:00) e lista de destinatários do e-mail.
 - **Dark Mode 100% Industrial** — Adaptação completa de todos os componentes (Sidebar, gráficos, modais, tabela e cards) ao tema escuro.
-- **Coleta Automática do TOTVS Protheus (07:00 e 18:00)** — Sincronizador autônomo com agendamento no Windows Task Scheduler e envio de e-mails diários via SMTP cPanel.
 
 ---
 
@@ -79,6 +80,7 @@ dashboard-refugo/
 │       │   ├── GraficoAnual.tsx        # Gráfico de visão anual
 │       │   ├── TabelaRegistros.tsx     # Tabela de lançamentos com CRUD
 │       │   ├── AnaliseMotivoRefugo.tsx # Análise por motivo
+│       │   ├── RankingProdutosRefugo.tsx # Top 10 Produtos & Ferramentas (ERP Protheus)
 │       │   ├── Sidebar.tsx             # Menu lateral com navegação por mês
 │       │   ├── ModalConfiguracoes.tsx  # Configurações (meta, motivos, dados, Modo TV)
 │       │   ├── ModalMotivoRefugo.tsx   # Modal de motivos por lançamento
@@ -441,6 +443,24 @@ Isso garante uma experiência de uso extremamente fluida, ideal para ambientes d
 |---|---|
 | `meta_refugo` | número (ex: `25`) |
 | `motivos` | array JSON de strings |
+| `ranking_produtos_refugo` | objeto JSONB `{ atualizado_em, dias_janela: 30, produtos: [...] }` |
+
+### 🔍 Ranking Top 10 Produtos & Ferramentas (ERP Protheus)
+
+O dashboard possui um painel analítico alimentado pela rotina de sincronização Protheus (`scripts/sync-protheus/sync.js`). Ele executa a consulta SQL em `query_ranking_produtos.sql` com uma janela móvel dos **últimos 30 dias**:
+
+1. **Cruzamento de Tabelas Protheus:**
+   - **`SBC010`**: Apontamentos de refugo (Filial `01`, Almoxarifado `55`).
+   - **`SC2010`**: Ordens de Produção (mapeia a OP ao produto acabado `C2_PRODUTO`, desconsiderando retrabalho/lote `R`).
+   - **`SD3010`**: Movimentações internas de produção (TM `010`, Almoxarifado `98`).
+   - **`SB1010`**: Cadastro geral de produtos (`B1_PESO` para converter a produção em Kg de produtos acabados `B1_TIPO = '01'`).
+2. **Cálculo de Perda:**
+   - Taxa de Rejeição = `(Kg Refugo / Kg Produção) * 100`.
+   - Concatenação automática de todas as ferramentas e moldes (`BC_FERRAME` / `BC_NOMEFER`) utilizados na fabricação do produto.
+3. **Agendamento Automático Diário:**
+   - Executado às **07:00** e **18:00** via Windows Task Scheduler (`executar-sync.bat`).
+   - Grava o resultado na tabela `config` do Supabase com a chave `ranking_produtos_refugo`.
+   - Insere o resumo do Top 5 produtos mais críticos no e-mail diário corporativo enviado via SMTP cPanel.
 
 ### Save no logout (`Home.tsx`)
 
