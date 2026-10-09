@@ -1,171 +1,416 @@
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useDashboard } from "@/contexts/DashboardContext";
 import { ordenarMotivos } from "@/services/refugoService";
-
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Line,
+  ComposedChart,
+  ReferenceLine,
 } from "recharts";
+import { BarChart3, PieChart as PieIcon, LineChart as ParetoIcon, Target, Lightbulb } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-// Paleta de cores — expande automaticamente para qualquer número de motivos
+// Paleta industrial harmoniosa
 const PALETA = [
-  "#FF2D2D", "#FF7A00", "#FFD600", "#00C853",
-  "#00B8D4", "#2979FF", "#D500F9", "#FF1493",
-  "#00E676", "#FF6D00", "#1DE9B6", "#AA00FF",
-  "#F50057", "#00B0FF", "#76FF03", "#FF4081",
+  "#dc2626", // Vermelho forte
+  "#ea580c", // Laranja queimado
+  "#f59e0b", // Âmbar
+  "#0284c7", // Azul
+  "#8b5cf6", // Roxo
+  "#059669", // Esmeralda
+  "#ec4899", // Rosa
+  "#06b6d4", // Ciano
+  "#64748b", // Ardósia
+  "#d97706", // Ouro
 ];
 
 function getCor(index: number): string {
   return PALETA[index % PALETA.length];
 }
 
+type TabTipo = "pareto" | "barras" | "pizza";
+
 export default function AnaliseMotivoRefugo() {
   const { mesAtual, getMesData, motivos: motivosCadastrados } = useDashboard();
   const mesData = getMesData(mesAtual);
+  const [tabAtiva, setTabAtiva] = useState<TabTipo>("pareto");
 
   // 1. Agrega quantidades por motivo a partir dos registros do mês
   const totais: Record<string, number> = {};
-  mesData.registros.forEach(registro => {
-    (registro.motivos ?? []).forEach(m => {
+  mesData.registros.forEach((registro) => {
+    (registro.motivos ?? []).forEach((m) => {
       totais[m.motivo] = (totais[m.motivo] || 0) + m.quantidade;
     });
   });
 
-  // 2. Une motivos cadastrados + motivos que aparecem nos registros (sem duplicatas)
-  const todosMotivosBrutos = Array.from(
-    new Set([...motivosCadastrados, ...Object.keys(totais)])
+  const totalGeral = useMemo(
+    () => Object.values(totais).reduce((s, v) => s + v, 0),
+    [totais]
   );
 
-  // 3. Ordena: alfabético, "Outros" por último
-  const todosMotivos = ordenarMotivos(todosMotivosBrutos);
+  // 2. Ordena por quantidade DECRESCENTE (Fundamental para o Pareto)
+  const motivosOrdenados = useMemo(() => {
+    return Object.keys(totais)
+      .filter((m) => totais[m] > 0)
+      .sort((a, b) => totais[b] - totais[a]);
+  }, [totais]);
 
-  // 4. Mapa de cor estável por motivo (baseado na posição ordenada)
-  const coresMap: Record<string, string> = {};
-  todosMotivos.forEach((m, i) => { coresMap[m] = getCor(i); });
+  // 3. Monta dataset completo com valores, percentual e percentual acumulado
+  const dadosPareto = useMemo(() => {
+    let acumulado = 0;
+    return motivosOrdenados.map((motivo, idx) => {
+      const quantidade = totais[motivo];
+      const pct = totalGeral > 0 ? (quantidade / totalGeral) * 100 : 0;
+      acumulado += pct;
+      return {
+        motivo: motivo.length > 20 ? motivo.substring(0, 18) + "..." : motivo,
+        motivoCompleto: motivo,
+        quantidade: parseFloat(quantidade.toFixed(2)),
+        pct: parseFloat(pct.toFixed(2)),
+        pctAcumulado: parseFloat(Math.min(100, acumulado).toFixed(2)),
+        cor: getCor(idx),
+        is80Percent: acumulado - pct < 80, // Faz parte dos primeiros 80%
+      };
+    });
+  }, [motivosOrdenados, totais, totalGeral]);
 
-  // 5. Dados para ambos os gráficos — computado uma única vez
-  const dadosGraficos = useMemo(() => {
-    return todosMotivos
-      .filter(m => (totais[m] ?? 0) > 0)
-      .map(m => ({
-        motivo: m.length > 20 ? m.substring(0, 17) + "..." : m,
-        motivoCompleto: m,
-        quantidade: totais[m],
-        cor: coresMap[m],
-      }));
-  }, [todosMotivos, totais, coresMap]);
+  // 4. Motivos que respondem pelos primeiros 80% do refugo (Regra de Pareto)
+  const motivosCriticos = useMemo(() => {
+    return dadosPareto.filter((d) => d.is80Percent);
+  }, [dadosPareto]);
 
-  const dadosBarras = dadosGraficos;
-  const dadosPizza = useMemo(() => dadosGraficos.map(d => ({ name: d.motivoCompleto, value: d.quantidade, cor: d.cor })), [dadosGraficos]);
+  const pctCriticos = useMemo(() => {
+    if (motivosCriticos.length === 0) return 0;
+    const ultimo = motivosCriticos[motivosCriticos.length - 1];
+    return ultimo ? ultimo.pctAcumulado : 0;
+  }, [motivosCriticos]);
 
-  const totalGeral = useMemo(() => Object.values(totais).reduce((s, v) => s + v, 0), [totais]);
-
-  if (dadosBarras.length === 0) {
+  if (dadosPareto.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Análise de Motivos de Refugo</h3>
-        <div className="flex items-center justify-center h-64">
-          <p className="text-sm text-gray-500">Nenhum motivo de refugo registrado neste mês</p>
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6">
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">
+          Análise de Motivos de Refugo
+        </h3>
+        <div className="flex flex-col items-center justify-center h-48 text-slate-400 dark:text-slate-500">
+          <Target className="w-8 h-8 mb-2 opacity-50" />
+          <p className="text-sm">Nenhum motivo de refugo registrado neste mês.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Gráfico de Barras */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Motivos de Refugo — Quantidade</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={dadosBarras} margin={{ top: 20, right: 30, left: 0, bottom: 60 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis
-              dataKey="motivo"
-              angle={-45}
-              textAnchor="end"
-              height={100}
-              tick={{ fontSize: 12 }}
-            />
-            <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip
-              contentStyle={{ backgroundColor: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "8px" }}
-              formatter={(value: any) => [value.toLocaleString("pt-BR", { maximumFractionDigits: 2 }), "Quantidade"]}
-              labelFormatter={(label) => {
-                const entry = dadosBarras.find(d => d.motivo === label);
-                return entry?.motivoCompleto ?? label;
-              }}
-            />
-            <Bar dataKey="quantidade" radius={[8, 8, 0, 0]} label={{ position: "top", fontSize: 11, fontWeight: 600, formatter: (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 1 }) }}>
-              {dadosBarras.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.cor} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+      {/* Cabeçalho com Abas */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div>
+          <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+            <span>Análise de Motivos de Refugo</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono font-medium">
+              {dadosPareto.length} causa{dadosPareto.length !== 1 ? "s" : ""}
+            </span>
+          </h3>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+            Identifique as principais causas de desperdício para ações corretivas
+          </p>
+        </div>
+
+        {/* Botões de Seleção de Visualização (Pills) */}
+        <div className="inline-flex p-1 bg-slate-100 dark:bg-slate-800/80 rounded-lg text-xs font-medium">
+          <button
+            onClick={() => setTabAtiva("pareto")}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all",
+              tabAtiva === "pareto"
+                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm font-semibold"
+                : "text-slate-500 hover:text-slate-900 dark:text-slate-400"
+            )}
+          >
+            <ParetoIcon className="w-3.5 h-3.5 text-red-500" />
+            <span>Pareto (80/20)</span>
+          </button>
+          <button
+            onClick={() => setTabAtiva("barras")}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all",
+              tabAtiva === "barras"
+                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm font-semibold"
+                : "text-slate-500 hover:text-slate-900 dark:text-slate-400"
+            )}
+          >
+            <BarChart3 className="w-3.5 h-3.5 text-blue-500" />
+            <span>Barras</span>
+          </button>
+          <button
+            onClick={() => setTabAtiva("pizza")}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all",
+              tabAtiva === "pizza"
+                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm font-semibold"
+                : "text-slate-500 hover:text-slate-900 dark:text-slate-400"
+            )}
+          >
+            <PieIcon className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Distribuição</span>
+          </button>
+        </div>
       </div>
 
-      {/* Pizza + Tabela */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Pizza */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4">Distribuição de Motivos</h3>
-          <ResponsiveContainer width="100%" height={300}>
+      {/* Diagnóstico Rápido de Pareto 80/20 */}
+      {motivosCriticos.length > 0 && (
+        <div className="flex items-start gap-3 p-3.5 rounded-lg border border-amber-200/80 bg-amber-50/70 dark:bg-amber-950/20 dark:border-amber-900/40 text-xs text-amber-900 dark:text-amber-200">
+          <Lightbulb className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <span className="font-bold">Princípio de Pareto (Causas Críticas): </span>
+            Apenas{" "}
+            <strong>
+              {motivosCriticos.length} motivo{motivosCriticos.length !== 1 ? "s" : ""}
+            </strong>{" "}
+            (
+            {motivosCriticos.map((m) => `"${m.motivoCompleto}"`).join(", ")}
+            ) concentram{" "}
+            <strong className="underline decoration-amber-500 underline-offset-2">
+              {pctCriticos.toFixed(1)}% de todas as perdas
+            </strong>{" "}
+            deste mês. Atuar prioritariamente sobre essas causas trará o maior impacto na redução de custos.
+          </div>
+        </div>
+      )}
+
+      {/* CONTEÚDO DA VISUALIZAÇÃO SELECIONADA */}
+      {tabAtiva === "pareto" && (
+        <div className="space-y-4">
+          <div className="h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart
+                data={dadosPareto}
+                margin={{ top: 15, right: 25, left: 0, bottom: 45 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis
+                  dataKey="motivo"
+                  angle={-25}
+                  textAnchor="end"
+                  tick={{ fontSize: 11, fill: "#64748b" }}
+                  interval={0}
+                />
+                <YAxis
+                  yAxisId="kg"
+                  tick={{ fontSize: 11, fill: "#64748b" }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v) => `${v.toLocaleString("pt-BR")} Kg`}
+                />
+                <YAxis
+                  yAxisId="pct"
+                  orientation="right"
+                  domain={[0, 100]}
+                  tick={{ fontSize: 11, fill: "#64748b" }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v) => `${v}%`}
+                />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload || !payload.length) return null;
+                    const item = payload[0].payload;
+                    return (
+                      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-lg p-3 text-xs">
+                        <p className="font-bold text-slate-800 dark:text-slate-100 mb-1.5">
+                          {item.motivoCompleto}
+                        </p>
+                        <div className="space-y-1">
+                          <div className="flex justify-between gap-4">
+                            <span className="text-slate-500">Quantidade:</span>
+                            <span className="font-mono font-bold text-red-600">
+                              {item.quantidade.toLocaleString("pt-BR")} Kg
+                            </span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span className="text-slate-500">Participação:</span>
+                            <span className="font-mono font-semibold text-slate-700 dark:text-slate-300">
+                              {item.pct}%
+                            </span>
+                          </div>
+                          <div className="flex justify-between gap-4 pt-1 border-t border-slate-100 dark:border-slate-800">
+                            <span className="text-slate-500 font-semibold">% Acumulado:</span>
+                            <span className="font-mono font-bold text-blue-600">
+                              {item.pctAcumulado}%
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }}
+                />
+                {/* Linha de Referência dos 80% */}
+                <ReferenceLine
+                  yAxisId="pct"
+                  y={80}
+                  stroke="#ef4444"
+                  strokeDasharray="4 4"
+                  strokeWidth={1.5}
+                  label={{
+                    value: "Linha 80% (Pareto)",
+                    position: "insideTopRight",
+                    fill: "#ef4444",
+                    fontSize: 10,
+                    fontWeight: 600,
+                  }}
+                />
+                {/* Barras de Quantidade (Kg) */}
+                <Bar yAxisId="kg" dataKey="quantidade" radius={[4, 4, 0, 0]} maxBarSize={45}>
+                  {dadosPareto.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={entry.is80Percent ? "#dc2626" : "#94a3b8"}
+                    />
+                  ))}
+                </Bar>
+                {/* Linha Curva Acumulada */}
+                <Line
+                  yAxisId="pct"
+                  type="monotone"
+                  dataKey="pctAcumulado"
+                  stroke="#2563eb"
+                  strokeWidth={2.5}
+                  dot={{ fill: "#2563eb", r: 3 }}
+                  activeDot={{ r: 5 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {tabAtiva === "barras" && (
+        <div className="h-72 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={dadosPareto} margin={{ top: 15, right: 20, left: 0, bottom: 45 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+              <XAxis
+                dataKey="motivo"
+                angle={-25}
+                textAnchor="end"
+                tick={{ fontSize: 11, fill: "#64748b" }}
+                interval={0}
+              />
+              <YAxis
+                tick={{ fontSize: 11, fill: "#64748b" }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(v) => `${v.toLocaleString("pt-BR")} Kg`}
+              />
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (!active || !payload || !payload.length) return null;
+                  const item = payload[0].payload;
+                  return (
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-lg p-3 text-xs">
+                      <p className="font-bold text-slate-800 dark:text-slate-100 mb-1">
+                        {item.motivoCompleto}
+                      </p>
+                      <p className="font-mono text-slate-700 dark:text-slate-300">
+                        {item.quantidade.toLocaleString("pt-BR")} Kg ({item.pct}%)
+                      </p>
+                    </div>
+                  );
+                }}
+              />
+              <Bar dataKey="quantidade" radius={[4, 4, 0, 0]} maxBarSize={45}>
+                {dadosPareto.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.cor} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {tabAtiva === "pizza" && (
+        <div className="h-72 w-full flex items-center justify-center">
+          <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={dadosPizza}
+                data={dadosPareto}
+                dataKey="quantidade"
+                nameKey="motivoCompleto"
                 cx="50%"
                 cy="50%"
-                labelLine={false}
-                label={({ name, value }) =>
-                  `${name.length > 14 ? name.substring(0, 12) + "…" : name}: ${value.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}`
+                outerRadius={95}
+                innerRadius={45}
+                paddingAngle={2}
+                label={({ name, percent }) =>
+                  `${name.length > 14 ? name.substring(0, 12) + "…" : name} (${((percent || 0) * 100).toFixed(1)}%)`
                 }
-                outerRadius={80}
-                dataKey="value"
               >
-                {dadosPizza.map((entry, index) => (
+                {dadosPareto.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.cor} />
                 ))}
               </Pie>
               <Tooltip
-                formatter={(value: any, name: any) => [
-                  value.toLocaleString("pt-BR", { maximumFractionDigits: 2 }),
+                formatter={(val: any, name: any) => [
+                  `${Number(val).toLocaleString("pt-BR")} Kg`,
                   name,
                 ]}
               />
             </PieChart>
           </ResponsiveContainer>
         </div>
+      )}
 
-        {/* Tabela de detalhes */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4">Detalhes por Motivo</h3>
-          <div className="space-y-2 max-h-80 overflow-y-auto">
-            {dadosBarras.map(({ motivoCompleto, quantidade, cor }) => {
-              const percentual = totalGeral > 0 ? (quantidade / totalGeral) * 100 : 0;
-              return (
-                <div key={motivoCompleto} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: cor }} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 truncate">{motivoCompleto}</p>
-                      <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                        <div
-                          className="h-1.5 rounded-full transition-all"
-                          style={{ width: `${percentual}%`, backgroundColor: cor }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right ml-3 flex-shrink-0">
-                    <p className="text-sm font-semibold text-gray-800">
-                      {quantidade.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}
-                    </p>
-                    <p className="text-xs text-gray-500">{percentual.toFixed(1)}%</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+      {/* Tabela Resumo com Destaques */}
+      <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2.5">
+          Detalhamento Quantitativo por Motivo
+        </h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-52 overflow-y-auto pr-1">
+          {dadosPareto.map((m) => (
+            <div
+              key={m.motivoCompleto}
+              className={cn(
+                "flex items-center justify-between p-2.5 rounded-lg border text-xs transition-all",
+                m.is80Percent
+                  ? "bg-red-50/40 border-red-200/80 dark:bg-red-950/20 dark:border-red-900/40"
+                  : "bg-slate-50/60 border-slate-200/70 dark:bg-slate-800/40 dark:border-slate-800"
+              )}
+            >
+              <div className="flex items-center gap-2 min-w-0 pr-2">
+                <span
+                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: m.cor }}
+                />
+                <span
+                  className="font-semibold text-slate-800 dark:text-slate-200 truncate"
+                  title={m.motivoCompleto}
+                >
+                  {m.motivoCompleto}
+                </span>
+                {m.is80Percent && (
+                  <span className="px-1.5 py-0.2 text-[9px] font-bold rounded bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300">
+                    80/20
+                  </span>
+                )}
+              </div>
+              <div className="text-right flex-shrink-0 font-mono">
+                <span className="font-bold text-slate-900 dark:text-slate-100">
+                  {m.quantidade.toLocaleString("pt-BR")} Kg
+                </span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 ml-1">
+                  ({m.pct}%)
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
