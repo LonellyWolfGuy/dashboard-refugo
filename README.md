@@ -1,6 +1,6 @@
-# 📊 Dashboard de Controle de Refugo — V2.3
+# 📊 Dashboard de Controle de Refugo — V2.5
 
-> **Status: 🟢 Versão 2.3 Estável** (Julho 2026)
+> **Status: 🟢 Versão 2.5 Estável** (Outubro 2026)
 
 [![Deploy on Vercel](https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel)](https://vercel.com)
 [![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?logo=supabase)](https://supabase.com)
@@ -8,41 +8,42 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript)](https://www.typescriptlang.org)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss)](https://tailwindcss.com)
 
-Sistema web para controle e análise de refugo industrial. Permite lançar registros diários de produção e refugo, visualizar tendências por mês e ano, analisar motivos de refugo e exportar relatórios em PDF — com dados persistidos em tempo real no Supabase e acesso protegido por autenticação.
+Sistema web para controle e análise de refugo industrial. Permite coletar dados automáticos do TOTVS Protheus, lançar registros diários de produção e refugo, visualizar tendências por mês e ano com curvas de Pareto 80/20, analisar causas de perdas e exportar relatórios em PDF e Excel — com dados persistidos em tempo real no Supabase, envio automático de e-mails via cPanel e suporte total a Dark Mode.
 
 ---
 
-## 🚀 Novidades da Versão Atual (V2.4 — Outubro 2026)
+## 🚀 Novidades da Versão Atual (V2.5 — Outubro 2026)
 
-- **Coleta Automática do TOTVS Protheus** — Módulo autônomo em Node.js que conecta diretamente ao SQL Server do Protheus (`SBC010`, `SD3010`, `SB1010`, `SX5010`), eliminando a necessidade de lançamentos manuais.
-- **Sincronização em 2 Turnos Diários (07:00 e 18:00)** — Coleta às 07:00 para consolidar o fechamento do turno da noite e às 18:00 para o expediente diurno, com script PowerShell para agendamento automático no Windows Task Scheduler.
-- **Categorização Automática de Motivos** — Captura e agrupa os motivos reais de refugo cadastrados na tabela SX5 (ex: `REFUGO PRODUCAO`, `REFUGO PRODUCAO CRISTAL`, `BORRA`) com pesos exatos em Kg para os gráficos de Pareto e Pizza.
-- **Notificações por E-mail (cPanel SMTP)** — Envio automático de relatório formatado em HTML com indicadores de Produção, Refugo e tabela detalhada de motivos para múltiplos destinatários (PCP, Vendas e TI).
-- **Badge de Status em Tempo Real** — Indicador visual no cabeçalho do Dashboard com ponto verde pulsante e tooltip detalhado exibindo a data, hora e status da última coleta do Protheus.
-- **Histórico de Logs em Disco** — Rotação automática de logs por dia (`logs/sync-AAAA-MM-DD.log`) e log contínuo (`sync.log`) no servidor.
-- **Ano Dinâmico** — O sistema identifica o ano nativamente sem amarras fixas.
-- **UX Premium** — Diálogos de confirmação Shadcn/UI para operações sensíveis e layout de cards responsivos para dispositivos móveis.
-- **Arquitetura 100% Supabase** — Persistência instantânea, Row Level Security (RLS) e atualização em tempo real.
-- **Modo TV** — Modo de exibição em tela cheia para TV industrial com slideshow automático (dashboard, clima, aniversariantes, mural e vídeos).
+- **Inteligência Operacional nos KPIs** — Barra de meta visual com cálculo em tempo real de folga ou excedente, micro-tendências comparativas com o mês anterior e faixa de destaques operacionais com **Melhor Dia**, **Dia Crítico** e **Médias Diárias Ativas** de produção e refugo.
+- **Gráfico de Pareto 80/20 nos Motivos de Refugo** — Padrão Lean Six Sigma com colunas decrescentes de Kg, linha de percentual acumulado e marcação na linha de corte de 80%, acompanhado de um card inteligente que resume automaticamente quais motivos concentram 80% das perdas.
+- **Seletor de Abas de Análise** — Alternância rápida entre *Pareto (80/20)*, *Ranking de Barras* e *Distribuição (Pizza)*.
+- **Exportação Rápida para Excel (.csv formatado)** — Exportação com 1 clique de planilhas formatadas para Microsoft Excel com codificação UTF-8 BOM, separadores decimais brasileiros e detalhamento completo de motivos.
+- **Filtros Rápidos na Tabela** — Abas de filtragem instantânea: *Todos os Dias*, *⚠️ Acima da Meta*, *✅ Dentro da Meta* e *📋 Sem Motivos Cadastrados*.
+- **Expansão de Linha Inline (Accordion)** — Visualização imediata dos motivos e pesos de cada dia diretamente na linha da tabela, sem necessidade de abrir modais.
+- **Evolução Diária com Taxa de Conformidade** — Pontos no gráfico de linha destacados dinamicamente em verde (dentro da meta) e vermelho (acima da meta), além de indicador da taxa de conformidade mensal (% dos dias aprovados).
+- **Central de Integração Protheus & E-mail** — Modal interativo ao clicar no badge do cabeçalho com status detalhado da conexão com o banco Protheus (SQL Server), Supabase, horários de sincronização (07:00 e 18:00) e lista de destinatários do e-mail.
+- **Dark Mode 100% Industrial** — Adaptação completa de todos os componentes (Sidebar, gráficos, modais, tabela e cards) ao tema escuro.
+- **Coleta Automática do TOTVS Protheus (07:00 e 18:00)** — Sincronizador autônomo com agendamento no Windows Task Scheduler e envio de e-mails diários via SMTP cPanel.
 
 ---
 
 ## ✨ Funcionalidades
 
 - **Login seguro** — autenticação com e-mail e senha via Supabase Auth
-- **KPIs em tempo real** — total produzido, total refugo, percentual do mês e comparativo com a meta configurável
-- **Gráfico mensal** — barras empilhadas de produção × refugo com linha de meta
-- **Gráfico anual** — visão consolidada dos 12 meses do ano
-- **Análise por motivo** — gráfico de pizza e ranking dos principais motivos de refugo
+- **KPIs em tempo real com barra de meta** — total produzido, total refugo, percentual do mês, indicador de folga/excedente e faixa de destaques com melhor dia e dia crítico
+- **Gráfico mensal de conformidade** — barras de produção × refugo, pontos diários com distinção visual de meta (verde/vermelho) e taxa de conformidade mensal
+- **Gráfico anual** — visão consolidada dos 12 meses do ano com linha de meta
+- **Gráfico de Pareto 80/20 e Análise por motivo** — distribuição quantitativa com curva acumulada, seletor de abas (Pareto, Barras e Pizza) e diagnóstico inteligente de causas prioritárias
+- **Tabela de Lançamentos com Filtros e Expansão** — abas de filtro rápido (*Todos*, *Acima da Meta*, *Dentro da Meta*, *Sem Motivos*) e expansão inline de motivos
+- **Exportação Dupla (PDF e Excel)** — relatórios executivos em PDF e planilhas formatadas em Excel (.csv com BOM UTF-8) gerados instantaneamente com 1 clique
+- **Central de Integração Protheus** — modal interativo detalhando a sincronização automática SQL Server e status de disparo de e-mails cPanel
 - **Lançamentos flexíveis** — adicionar, editar e excluir registros; ao digitar data de outro mês, o registro é salvo no mês correto automaticamente
 - **Motivos customizáveis** — lista de motivos configurável, vinculados a cada lançamento
-- **Exportação PDF completa** — relatório mensal com totais, tabela de registros e motivos gerado no navegador
 - **Persistência instantânea** — cada alteração é enviada ao Supabase imediatamente, sem aguardar ciclos do React
 - **Save garantido no logout** — ao clicar em Sair, todos os dados são sincronizados com o banco antes de encerrar a sessão
-- **Dados preservados entre deploys** — atualizações de código nunca sobrescrevem os dados do banco; cada registro é uma linha independente no Supabase, eliminando race conditions e sobrescrita acidental
-- **Tema claro/escuro** — alternância manual pelo cabeçalho
+- **Tema claro/escuro (Dark Mode)** — alternância com suporte 100% integrado em todos os gráficos, cards, modais e tabelas
 - **Totalmente Responsivo** — layout inteligente que alterna entre tabela (Desktop) e Cards (Mobile) para máxima usabilidade em qualquer tela
-- **Modo TV** — tela cheia com slideshow automático: dashboard com % refugo animado, clima, aniversariantes do mês, imagens do mural e vídeos (MP4 ou YouTube)
+- **Modo TV Industrial** — tela cheia com slideshow automático: dashboard com % refugo animado, clima, aniversariantes do mês, imagens do mural e vídeos (MP4 ou YouTube)
 - **Mural de Imagens** — upload de fotos da fábrica com legendas para exibição no Modo TV
 
 ---
