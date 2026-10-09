@@ -100,7 +100,8 @@ const dbConfig = {
     encrypt: process.env.DB_ENCRYPT === "true",
     trustServerCertificate: process.env.DB_TRUST_SERVER_CERT !== "false",
     enableArithAbort: true,
-    requestTimeout: 30000,
+    connectionTimeout: parseInt(process.env.DB_CONNECTION_TIMEOUT || "60000", 10),
+    requestTimeout: parseInt(process.env.DB_REQUEST_TIMEOUT || "300000", 10),
   },
 };
 
@@ -405,8 +406,8 @@ async function consultarRefugo(pool, dataProtheus) {
       ISNULL(NULLIF(RTRIM(X5.X5_DESCRI), ''), 'Outros') AS motivo,
       RTRIM(SBC.BC_MOTIVO) AS cod_motivo,
       CAST(SUM(SBC.BC_QTDDEST) AS NUMERIC(12, 2)) AS quantidade
-    FROM SBC${tabelaPrefixo} SBC
-    LEFT JOIN SX5${tabelaPrefixo} X5 
+    FROM SBC${tabelaPrefixo} SBC WITH (NOLOCK)
+    LEFT JOIN SX5${tabelaPrefixo} X5 WITH (NOLOCK)
       ON X5.X5_TABELA = '43' 
      AND RTRIM(X5.X5_CHAVE) = RTRIM(SBC.BC_MOTIVO)
      AND X5.D_E_L_E_T_ = ' '
@@ -436,8 +437,8 @@ async function consultarProducao(pool, dataProtheus) {
   const query = `
     SELECT 
       CAST(ISNULL(SUM(SD3.D3_QUANT * ISNULL(SB1.B1_PESO, 0)), 0) AS NUMERIC(12, 2)) AS total_producao
-    FROM SD3${tabelaPrefixo} SD3
-    LEFT JOIN SB1${tabelaPrefixo} SB1 
+    FROM SD3${tabelaPrefixo} SD3 WITH (NOLOCK)
+    LEFT JOIN SB1${tabelaPrefixo} SB1 WITH (NOLOCK)
       ON SB1.B1_COD = SD3.D3_COD 
      AND SB1.D_E_L_E_T_ = ' '
     WHERE SD3.D3_TM = '010'
@@ -571,7 +572,7 @@ async function processarRankingProdutos(pool) {
               LTRIM(RTRIM(BC.BC_FERRAME)) AS Ferramenta,
               LTRIM(RTRIM(BC.BC_NOMEFER)) AS NomeFerramenta,
               SUM(ISNULL(BC.BC_QTDDEST, 0)) AS KgRefugo
-          FROM dbo.SBC${tabelaPrefixo} BC
+          FROM dbo.SBC${tabelaPrefixo} BC WITH (NOLOCK)
           WHERE BC.D_E_L_E_T_ <> '*'
             AND BC.BC_FILIAL = '${empresa}'
             AND BC.BC_LOCAL = '55'
@@ -595,7 +596,7 @@ async function processarRankingProdutos(pool) {
               COUNT(*) AS Correspondencias,
               CASE WHEN COUNT(*) = 1 THEN MAX(C2.C2_PRODUTO) ELSE NULL END AS Produto,
               CASE WHEN COUNT(*) = 1 THEN MAX(C2.C2_LOTEIMP) ELSE NULL END AS Lote
-          FROM dbo.SC2${tabelaPrefixo} C2
+          FROM dbo.SC2${tabelaPrefixo} C2 WITH (NOLOCK)
           WHERE C2.D_E_L_E_T_ <> '*'
             AND C2.C2_FILIAL = R.Filial
             AND (
@@ -613,10 +614,10 @@ async function processarRankingProdutos(pool) {
           LTRIM(RTRIM(B1.B1_UM)),
           SUM(ISNULL(D3.D3_QUANT, 0)),
           SUM(ISNULL(D3.D3_QUANT, 0) * ISNULL(B1.B1_PESO, 0))
-      FROM dbo.SD3${tabelaPrefixo} D3
+      FROM dbo.SD3${tabelaPrefixo} D3 WITH (NOLOCK)
       OUTER APPLY (
           SELECT TOP (1) SB1.B1_DESC, SB1.B1_UM, SB1.B1_PESO, SB1.B1_TIPO
-          FROM dbo.SB1${tabelaPrefixo} SB1
+          FROM dbo.SB1${tabelaPrefixo} SB1 WITH (NOLOCK)
           WHERE SB1.D_E_L_E_T_ <> '*'
             AND SB1.B1_COD = D3.D3_COD
             AND SB1.B1_FILIAL IN ('', D3.D3_FILIAL)
@@ -676,7 +677,9 @@ async function processarRankingProdutos(pool) {
           P.Produto;
     `;
 
-    const result = await pool.request().query(query);
+    const request = pool.request();
+    request.timeout = parseInt(process.env.DB_REQUEST_TIMEOUT || "300000", 10);
+    const result = await request.query(query);
     const ranking = result.recordset.map((r) => ({
       ferramentas: r.Ferramentas ? r.Ferramentas.trim() : "Sem ferramenta",
       produto: r.Produto ? r.Produto.trim() : "",

@@ -38,7 +38,7 @@ DECLARE @Producao TABLE (
         LTRIM(RTRIM(BC.BC_NOMEFER)) AS NomeFerramenta,
         SUM(ISNULL(BC.BC_QTDDEST, 0)) AS KgRefugo
 
-    FROM dbo.SBC010 BC
+    FROM dbo.SBC010 BC WITH (NOLOCK)
 
     WHERE BC.D_E_L_E_T_ <> '*'
       AND BC.BC_FILIAL = '01'
@@ -83,7 +83,7 @@ OUTER APPLY (
             ELSE NULL
         END AS Lote
 
-    FROM dbo.SC2010 C2
+    FROM dbo.SC2010 C2 WITH (NOLOCK)
 
     WHERE C2.D_E_L_E_T_ <> '*'
       AND C2.C2_FILIAL = R.Filial
@@ -126,7 +126,7 @@ SELECT
         * ISNULL(B1.B1_PESO, 0)
     )
 
-FROM dbo.SD3010 D3
+FROM dbo.SD3010 D3 WITH (NOLOCK)
 
 OUTER APPLY (
     SELECT TOP (1)
@@ -135,7 +135,7 @@ OUTER APPLY (
         SB1.B1_PESO,
         SB1.B1_TIPO
 
-    FROM dbo.SB1010 SB1
+    FROM dbo.SB1010 SB1 WITH (NOLOCK)
 
     WHERE SB1.D_E_L_E_T_ <> '*'
       AND SB1.B1_COD = D3.D3_COD
