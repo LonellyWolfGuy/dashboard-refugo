@@ -2,9 +2,11 @@
 // Painel Top 10 Produtos & Ferramentas com Maior Rejeição (Últimos 30 Dias)
 // Dados coletados diretamente do TOTVS Protheus (SBC + SC2 + SD3 + SB1)
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import { useDashboard } from "@/contexts/DashboardContext";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { generateRankingProdutosPDF } from "@/lib/generatePDF";
 import {
   Flame,
   Wrench,
@@ -14,10 +16,26 @@ import {
   Package,
   TrendingUp,
   HelpCircle,
+  Printer,
 } from "lucide-react";
 
 export const RankingProdutosRefugo = memo(function RankingProdutosRefugo() {
-  const { rankingProdutos } = useDashboard();
+  const { rankingProdutos, metaRefugo } = useDashboard();
+  const [gerandoPDF, setGerandoPDF] = useState(false);
+
+  async function handleGerarPDF() {
+    if (!rankingProdutos) return;
+    try {
+      setGerandoPDF(true);
+      await generateRankingProdutosPDF(rankingProdutos, metaRefugo);
+      toast.success("Relatório de produtos & motivos exportado com sucesso!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Falha ao gerar o relatório em PDF.");
+    } finally {
+      setGerandoPDF(false);
+    }
+  }
 
   if (!rankingProdutos || !rankingProdutos.produtos || rankingProdutos.produtos.length === 0) {
     return (
@@ -88,9 +106,21 @@ export const RankingProdutosRefugo = memo(function RankingProdutosRefugo() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-          <Clock className="w-3.5 h-3.5 text-blue-500" />
-          <span className="font-mono text-[11px]">Atualizado: {dataAtualizacao}</span>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+            <Clock className="w-3.5 h-3.5 text-blue-500" />
+            <span className="font-mono text-[11px]">Atualizado: {dataAtualizacao}</span>
+          </div>
+
+          <button
+            onClick={handleGerarPDF}
+            disabled={gerandoPDF}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 rounded-lg transition-colors disabled:opacity-50 shadow-xs cursor-pointer"
+            title="Gerar e imprimir relatório completo em PDF (Padrão Implatec com produtos, moldes e motivos)"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>{gerandoPDF ? "Gerando..." : "Imprimir Relatório (PDF)"}</span>
+          </button>
         </div>
       </div>
 
