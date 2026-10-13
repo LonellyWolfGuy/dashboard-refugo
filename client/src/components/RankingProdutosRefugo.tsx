@@ -59,10 +59,11 @@ export const RankingProdutosRefugo = memo(function RankingProdutosRefugo() {
   // Dados formatados para os gráficos Recharts
   const dadosGrafico = useMemo(() => {
     return produtos.map((p, idx) => {
+      const ferramentaCompleta = p.ferramentas && p.ferramentas !== "Sem ferramenta" ? p.ferramentas : p.produto;
       const item: Record<string, any> = {
         posicao: idx + 1,
         codigo: p.produto,
-        rotulo: `${idx + 1}º ${p.produto.length > 10 ? p.produto.slice(0, 9) + "…" : p.produto}`,
+        rotulo: `${idx + 1}º ${ferramentaCompleta}`,
         codigoCompleto: p.produto,
         descricao: p.descricao,
         ferramentas: p.ferramentas,
@@ -288,7 +289,7 @@ export const RankingProdutosRefugo = memo(function RankingProdutosRefugo() {
                     <div className="flex items-center gap-1.5 min-w-[160px] text-slate-700 dark:text-slate-300">
                       <Wrench className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                       <span
-                        className="font-medium text-[11px] truncate max-w-[220px]"
+                        className="font-medium text-[11px] whitespace-normal"
                         title={p.ferramentas}
                       >
                         {p.ferramentas}
@@ -429,17 +430,17 @@ export const RankingProdutosRefugo = memo(function RankingProdutosRefugo() {
 
         {/* Área do Gráfico */}
         <div className="bg-slate-50/50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-800/80 rounded-xl p-3 sm:p-4">
-          <div className="h-[320px] w-full">
+          <div className="h-[340px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               {tabGrafico === "rejeicao" ? (
-                <ComposedChart data={dadosGrafico} margin={{ top: 15, right: 15, left: -10, bottom: 35 }}>
+                <ComposedChart data={dadosGrafico} margin={{ top: 15, right: 15, left: -10, bottom: 45 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:opacity-20" />
                   <XAxis
                     dataKey="rotulo"
                     stroke="#94a3b8"
                     tick={{ fontSize: 11 }}
                     interval={0}
-                    angle={-25}
+                    angle={-28}
                     textAnchor="end"
                   />
                   <YAxis
@@ -491,14 +492,14 @@ export const RankingProdutosRefugo = memo(function RankingProdutosRefugo() {
                   />
                 </ComposedChart>
               ) : tabGrafico === "comparativo" ? (
-                <BarChart data={dadosGrafico} margin={{ top: 15, right: 15, left: -10, bottom: 35 }}>
+                <BarChart data={dadosGrafico} margin={{ top: 15, right: 15, left: -10, bottom: 45 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:opacity-20" />
                   <XAxis
                     dataKey="rotulo"
                     stroke="#94a3b8"
                     tick={{ fontSize: 11 }}
                     interval={0}
-                    angle={-25}
+                    angle={-28}
                     textAnchor="end"
                   />
                   <YAxis
@@ -523,14 +524,14 @@ export const RankingProdutosRefugo = memo(function RankingProdutosRefugo() {
                   />
                 </BarChart>
               ) : (
-                <BarChart data={dadosGrafico} margin={{ top: 15, right: 15, left: -10, bottom: 35 }}>
+                <BarChart data={dadosGrafico} margin={{ top: 15, right: 15, left: -10, bottom: 45 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:opacity-20" />
                   <XAxis
                     dataKey="rotulo"
                     stroke="#94a3b8"
                     tick={{ fontSize: 11 }}
                     interval={0}
-                    angle={-25}
+                    angle={-28}
                     textAnchor="end"
                   />
                   <YAxis
