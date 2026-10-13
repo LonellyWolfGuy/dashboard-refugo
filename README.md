@@ -1,6 +1,6 @@
-# 📊 Dashboard de Controle de Refugo — V2.5
+# 📊 Dashboard de Controle de Refugo — V2.7
 
-> **Status: 🟢 Versão 2.5 Estável** (Outubro 2026)
+> **Status: 🟢 Versão 2.7 Estável** (Outubro 2026) — **Implatec Perfis** (Criador: Thiago Fischer)
 
 [![Deploy on Vercel](https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel)](https://vercel.com)
 [![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?logo=supabase)](https://supabase.com)
@@ -8,23 +8,18 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript)](https://www.typescriptlang.org)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss)](https://tailwindcss.com)
 
-Sistema web para controle e análise de refugo industrial. Permite coletar dados automáticos do TOTVS Protheus, lançar registros diários de produção e refugo, visualizar tendências por mês e ano com curvas de Pareto 80/20, analisar causas de perdas e exportar relatórios em PDF e Excel — com dados persistidos em tempo real no Supabase, envio automático de e-mails via cPanel e suporte total a Dark Mode.
+Sistema web para controle e análise de refugo industrial desenvolvido para a **Implatec Perfis**. Permite coletar dados automáticos do TOTVS Protheus, lançar registros diários de produção e refugo, visualizar tendências por mês e ano com curvas de Pareto 80/20, analisar causas de perdas e exportar relatórios executivos em PDF e planilhas Excel — com dados persistidos em tempo real no Supabase, envio automático de e-mails via cPanel e suporte total a Dark Mode.
 
 ---
 
-## 🚀 Novidades da Versão Atual (V2.6 — Outubro 2026)
+## 🚀 Novidades da Versão Atual (V2.7 — Outubro 2026)
 
-- **Ranking Top 10 Produtos & Ferramentas Mais Refugados (Últimos 30 dias - Protheus)** — Painel dedicado que consome a consulta oficial do ERP TOTVS Protheus (`SBC010`, `SC2010`, `SD3010`, `SB1010`), exibindo o Top 10 de itens com maior índice de perda (Kg refugo / Kg produzido), códigos das ferramentas/moldes envolvidos, unidades, pesos e barras visuais de severidade.
-- **Sincronização Diária Automatizada (07:00 e 18:00)** — O script `sync.js` agora roda a query analítica de 30 dias automaticamente em segundo plano via Windows Task Scheduler, salva os dados no Supabase e inclui o Top 5 no e-mail corporativo disparado pelo cPanel.
-- **Inteligência Operacional nos KPIs** — Barra de meta visual com cálculo em tempo real de folga ou excedente, micro-tendências comparativas com o mês anterior e faixa de destaques operacionais com **Melhor Dia**, **Dia Crítico** e **Médias Diárias Ativas** de produção e refugo.
-- **Gráfico de Pareto 80/20 nos Motivos de Refugo** — Padrão Lean Six Sigma com colunas decrescentes de Kg, linha de percentual acumulado e marcação na linha de corte de 80%, acompanhado de um card inteligente que resume automaticamente quais motivos concentram 80% das perdas.
-- **Seletor de Abas de Análise** — Alternância rápida entre *Pareto (80/20)*, *Ranking de Barras* e *Distribuição (Pizza)*.
-- **Exportação Rápida para Excel (.csv formatado)** — Exportação com 1 clique de planilhas formatadas para Microsoft Excel com codificação UTF-8 BOM, separadores decimais brasileiros e detalhamento completo de motivos.
-- **Filtros Rápidos na Tabela** — Abas de filtragem instantânea: *Todos os Dias*, *⚠️ Acima da Meta*, *✅ Dentro da Meta* e *📋 Sem Motivos Cadastrados*.
-- **Expansão de Linha Inline (Accordion)** — Visualização imediata dos motivos e pesos de cada dia diretamente na linha da tabela, sem necessidade de abrir modais.
-- **Evolução Diária com Taxa de Conformidade** — Pontos no gráfico de linha destacados dinamicamente em verde (dentro da meta) e vermelho (acima da meta), além de indicador da taxa de conformidade mensal (% dos dias aprovados).
-- **Central de Integração Protheus & E-mail** — Modal interativo ao clicar no badge do cabeçalho com status detalhado da conexão com o banco Protheus (SQL Server), Supabase, horários de sincronização (07:00 e 18:00) e lista de destinatários do e-mail.
-- **Dark Mode 100% Industrial** — Adaptação completa de todos os componentes (Sidebar, gráficos, modais, tabela e cards) ao tema escuro.
+- **Detalhamento de Motivos de Refugo no Ranking (SBC010 + SX5010)** — A consulta analítica de 30 dias agora extrai os motivos diretamente dos apontamentos da tabela `SBC010` (`BC_MOTIVO`) e cruza com a tabela de cadastros gerais do Protheus `SX5010` (Tabela `43`), exibindo a lista de motivos reais com seus respectivos pesos em Kg e percentual de perda para cada produto do Top 10.
+- **Relatório Executivo em PDF do Ranking (Padrão Implatec)** — Novo botão dedicado *"Imprimir Relatório (PDF)"* diretamente no card do ranking, gerando documento oficial A4 Paisagem com logo da Implatec, resumo executivo, tabela analítica com ferramentas/moldes e detalhamento completo de motivos por produto para auditoria.
+- **Agendamento Inteligente e Fim de Semana (Segunda a Sexta)** — O agendador do Windows (`agendar-tarefa.ps1`) e o script `sync.js` foram calibrados para executar de segunda a sexta-feira (07:30 e 18:00), com trava automática para não rodar aos sábados e domingos em execuções de rotina.
+- **Disparo de E-mail Centralizado às 18:00** — Envio do relatório diário corporativo via SMTP cPanel concentrado exclusivamente no fechamento do dia útil às 18:00, mantendo a sincronização da manhã (07:30) limpa e sem notificações prematuras.
+- **Novo Usuário Operacional de Qualidade** — Provisionamento do usuário `qualidade@implatec.com.br` no Supabase Auth com confirmação direta de e-mail para acesso da equipe ao painel.
+- **Ranking Top 10 Produtos & Ferramentas Mais Refugados** — Painel dedicado que consome a consulta oficial do ERP TOTVS Protheus (`SBC010`, `SC2010`, `SD3010`, `SB1010`), exibindo os itens com maior índice de perda (Kg refugo / Kg produzido), códigos das ferramentas/moldes envolvidos, unidades, pesos e barras visuais de severidade.
 
 ---
 
@@ -457,10 +452,11 @@ O dashboard possui um painel analítico alimentado pela rotina de sincronizaçã
 2. **Cálculo de Perda:**
    - Taxa de Rejeição = `(Kg Refugo / Kg Produção) * 100`.
    - Concatenação automática de todas as ferramentas e moldes (`BC_FERRAME` / `BC_NOMEFER`) utilizados na fabricação do produto.
-3. **Agendamento Automático Diário:**
-   - Executado às **07:00** e **18:00** via Windows Task Scheduler (`executar-sync.bat`).
+3. **Agendamento Automático (Segunda a Sexta às 07:30 e 18:00):**
+   - Configurado via PowerShell (`agendar-tarefa.ps1`) no Windows Task Scheduler (`executar-sync.bat`).
+   - Trava inteligente para evitar execuções desnecessárias aos finais de semana.
    - Grava o resultado na tabela `config` do Supabase com a chave `ranking_produtos_refugo`.
-   - Insere o resumo do Top 5 produtos mais críticos no e-mail diário corporativo enviado via SMTP cPanel.
+   - Disparo de e-mail corporativo automático via SMTP cPanel concentrado exclusivamente no fechamento das **18:00**.
 
 ### Save no logout (`Home.tsx`)
 
@@ -468,10 +464,8 @@ O botão Sair chama `salvarTudo()` silenciosamente (sem exibir erro ao usuário)
 
 ### Geração de PDF (`generatePDF.ts`)
 
-- Registros chegam já filtrados por mês via `getMesData()` — sem re-filtragem interna
-- Datas lidas diretamente da string `YYYY-MM-DD` (sem `new Date()`) para evitar erros de fuso horário
-- Coluna Motivos com quebra de linha automática (`splitTextToSize`) e altura de linha dinâmica
-- Proteção contra divisão por zero no cálculo de `% refugo` por linha
+- **Relatório Mensal:** Registros filtrados por mês via `getMesData()`, cabeçalho padrão Implatec, resumo geral e tabela diária de apontamentos.
+- **Relatório de Ranking & Motivos:** Formato A4 Paisagem (Landscape), resumo executivo do Top 10, tabela de produtos com códigos de ferramentas/moldes, quantidades, pesos e discriminação exata de motivos (SBC) com Kgs e percentuais de participação.
 
 ---
 
@@ -481,14 +475,14 @@ MIT © Implatec Perfis Plásticos
 
 ---
 
----
-
 ## 🛠️ Créditos e Desenvolvimento
 
-Este projeto e suas evoluções são de autoria de **Thiago Fischer**, com foco em robustez industrial, suporte temporal dinâmico e excelência em UX.
+- **Empresa:** Implatec Perfis Plásticos ®
+- **Criador / Desenvolvedor:** **Thiago Fischer**
+- Sistema desenvolvido com foco em robustez analítica, conformidade com os processos fabris do ERP TOTVS Protheus e excelência em UX industrial.
 
 ---
 
 <p align="center">
-  Desenvolvido para controle de qualidade industrial — <strong>Implatec Perfis Plásticos ®</strong>
+  Desenvolvido para controle de qualidade industrial — <strong>Implatec Perfis Plásticos ®</strong> — Criado por <strong>Thiago Fischer</strong>
 </p>

@@ -57,25 +57,27 @@ node sync.js --mes 10 --ano 2026
 
 ---
 
-## ⏰ Agendamento Automático no Windows (2 Períodos: 07:00 e 18:00)
+## ⏰ Agendamento Automático no Windows (Segunda a Sexta: 07:30 e 18:00)
 
-O script foi preparado para rodar em dois turnos diários:
-* **Às 07:00:** Consolida os apontamentos do turno da noite / fechamento de ontem e inicia a contagem de hoje.
-* **Às 18:00:** Consolida o turno diurno e atualiza os totais do dia.
+O script foi preparado para rodar nos dias úteis (segunda a sexta-feira):
+* **Às 07:30:** Consolida os apontamentos do turno da noite / fechamento de ontem e inicia a contagem do dia (sem envio de e-mail).
+* **Às 18:00:** Consolida o turno diurno, atualiza os totais, calcula o ranking e dispara o relatório oficial por e-mail corporativo.
+* **Finais de semana:** Possui trava automática que pula a execução aos sábados e domingos para evitar desperdício de recursos.
 
-Para cadastrar os dois horários automaticamente no Windows Task Scheduler, abra o PowerShell como Administrador nesta pasta e execute:
+Para cadastrar a rotina automaticamente no Windows Task Scheduler, abra o PowerShell como Administrador nesta pasta e execute:
 ```powershell
 .\agendar-tarefa.ps1
 ```
-A tarefa executará todos os dias às **07:00** e às **18:00**, gravando o histórico de execuções em `sync.log` e na pasta `logs/sync-AAAA-MM-DD.log`.
+A tarefa executará de **segunda a sexta-feira** às **07:30** e às **18:00**, gravando o histórico de execuções em `sync.log` e na pasta `logs/sync-AAAA-MM-DD.log`.
 
 ---
 
 ## 📧 Notificação por E-mail (cPanel SMTP)
 
-A cada sincronização concluída, um e-mail com layout corporativo HTML é enviado aos destinatários configurados contendo:
+A cada sincronização do fechamento das **18:00**, um e-mail com layout corporativo HTML é enviado aos destinatários configurados contendo:
 * Cards de Produção, Refugo e % de Refugo.
 * Tabela completa com o detalhamento dos motivos reais e seus pesos em Kg.
+* Top 5 produtos com maior índice de perda e suas ferramentas.
 * Data/hora e confirmação de gravação no Supabase.
 
 ### Configuração no `.env`:
@@ -102,3 +104,10 @@ node sync.js --test-email
 O script grava o carimbo da última execução na tabela `config` do Supabase. O Dashboard web exibe automaticamente no cabeçalho um badge em tempo real com indicador pulsante:
 * Exemplo: `🟢 Protheus: Hoje às 18:00`
 * Ao passar o mouse, exibe o tooltip completo com totais, status e horários agendados.
+
+---
+
+## 🛠️ Créditos
+* **Implatec Perfis Plásticos ®**
+* **Criador:** Thiago Fischer
+
