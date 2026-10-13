@@ -141,6 +141,7 @@ export const RankingProdutosRefugo = memo(function RankingProdutosRefugo() {
               <th className="px-3.5 py-2.5 w-12 text-center">#</th>
               <th className="px-3.5 py-2.5">Produto & Descrição</th>
               <th className="px-3.5 py-2.5">Ferramentas / Moldes</th>
+              <th className="px-3.5 py-2.5">Motivos de Refugo (Kg)</th>
               <th className="px-3.5 py-2.5 text-right">Qtd Produzida</th>
               <th className="px-3.5 py-2.5 text-right">Produção (Kg)</th>
               <th className="px-3.5 py-2.5 text-right">Refugo (Kg)</th>
@@ -209,6 +210,32 @@ export const RankingProdutosRefugo = memo(function RankingProdutosRefugo() {
                       >
                         {p.ferramentas}
                       </span>
+                    </div>
+                  </td>
+
+                  {/* Motivos de refugo */}
+                  <td className="px-3.5 py-3">
+                    <div className="min-w-[200px] space-y-0.5">
+                      {p.motivos && p.motivos.length > 0 ? (
+                        p.motivos.map((m) => (
+                          <div
+                            key={m.motivo}
+                            className="flex items-center justify-between gap-3 text-[11px]"
+                          >
+                            <span className="text-slate-700 dark:text-slate-300 truncate max-w-[170px]" title={m.motivo}>
+                              {m.motivo}
+                            </span>
+                            <span className="font-mono font-semibold text-red-600 dark:text-red-400 whitespace-nowrap">
+                              {m.kg.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} Kg
+                              <span className="text-slate-400 font-normal ml-1">
+                                ({p.kgRefugo > 0 ? ((m.kg / p.kgRefugo) * 100).toFixed(0) : 0}%)
+                              </span>
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <span className="text-[11px] text-slate-400">—</span>
+                      )}
                     </div>
                   </td>
 

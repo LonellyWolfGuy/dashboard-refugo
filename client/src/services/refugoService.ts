@@ -81,6 +81,7 @@ export interface UltimaSyncInfo {
 
 export interface ProdutoRankingRefugo {
   ferramentas: string;
+  motivos?: { motivo: string; kg: number }[];
   produto: string;
   descricao: string;
   quantidadeProduzida: number;

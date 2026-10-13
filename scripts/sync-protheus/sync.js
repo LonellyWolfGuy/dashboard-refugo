@@ -116,6 +116,9 @@ const args = process.argv.slice(2);
 const isDryRun = args.includes("--dry-run");
 const isTestConn = args.includes("--test-conn");
 const isTestEmail = args.includes("--test-email");
+const isForcar = args.includes("--forcar"); // ignora a trava de fim de semana
+const isEnviarEmail = args.includes("--enviar-email"); // força o envio do e-mail fora das 18:00
+const HORA_ENVIO_EMAIL = 18; // e-mail só é disparado a partir desta hora
 
 function getArgValue(flag) {
   const idx = args.indexOf(flag);
@@ -200,6 +203,11 @@ function criarTransportadorEmail() {
 
 async function enviarEmailRelatorio(resumo) {
   if (process.env.EMAIL_NOTIFICACAO_ATIVA !== "true") {
+    return;
+  }
+
+  if (!isEnviarEmail && new Date().getHours() < HORA_ENVIO_EMAIL) {
+    log(`E-mail não enviado: o relatório é disparado apenas às ${HORA_ENVIO_EMAIL}:00.`, colors.dim);
     return;
   }
 
@@ -554,6 +562,7 @@ async function processarRankingProdutos(pool) {
           Produto varchar(15),
           Ferramenta varchar(6),
           NomeFerramenta varchar(25),
+          Motivo varchar(60),
           KgRefugo float
       );
 
@@ -571,8 +580,16 @@ async function processarRankingProdutos(pool) {
               LTRIM(RTRIM(BC.BC_OP)) AS OP,
               LTRIM(RTRIM(BC.BC_FERRAME)) AS Ferramenta,
               LTRIM(RTRIM(BC.BC_NOMEFER)) AS NomeFerramenta,
+              ISNULL(NULLIF(LTRIM(RTRIM(MT.X5_DESCRI)), ''), 'Outros') AS Motivo,
               SUM(ISNULL(BC.BC_QTDDEST, 0)) AS KgRefugo
           FROM dbo.SBC${tabelaPrefixo} BC WITH (NOLOCK)
+          OUTER APPLY (
+              SELECT TOP (1) X5.X5_DESCRI
+              FROM dbo.SX5${tabelaPrefixo} X5 WITH (NOLOCK)
+              WHERE X5.X5_TABELA = '43'
+                AND RTRIM(X5.X5_CHAVE) = RTRIM(BC.BC_MOTIVO)
+                AND X5.D_E_L_E_T_ <> '*'
+          ) MT
           WHERE BC.D_E_L_E_T_ <> '*'
             AND BC.BC_FILIAL = '${empresa}'
             AND BC.BC_LOCAL = '55'
@@ -582,13 +599,15 @@ async function processarRankingProdutos(pool) {
               BC.BC_FILIAL,
               LTRIM(RTRIM(BC.BC_OP)),
               LTRIM(RTRIM(BC.BC_FERRAME)),
-              LTRIM(RTRIM(BC.BC_NOMEFER))
+              LTRIM(RTRIM(BC.BC_NOMEFER)),
+              ISNULL(NULLIF(LTRIM(RTRIM(MT.X5_DESCRI)), ''), 'Outros')
       )
-      INSERT INTO @Refugo (Produto, Ferramenta, NomeFerramenta, KgRefugo)
+      INSERT INTO @Refugo (Produto, Ferramenta, NomeFerramenta, Motivo, KgRefugo)
       SELECT
           LTRIM(RTRIM(O.Produto)),
           R.Ferramenta,
           R.NomeFerramenta,
+          R.Motivo,
           R.KgRefugo
       FROM RefugoPorOP R
       OUTER APPLY (
@@ -661,6 +680,22 @@ async function processarRankingProdutos(pool) {
                   1, 2, ''
               ) AS varchar(1000)
           ) AS Ferramentas,
+          CAST(
+              STUFF(
+                  (
+                      SELECT '||' + M.Motivo + '::' + CONVERT(varchar(30), CAST(M.Kg AS decimal(18,2)))
+                      FROM (
+                          SELECT F.Motivo, SUM(F.KgRefugo) AS Kg
+                          FROM @Refugo F
+                          WHERE F.Produto = P.Produto
+                          GROUP BY F.Motivo
+                      ) M
+                      ORDER BY M.Kg DESC
+                      FOR XML PATH(''), TYPE
+                  ).value('.', 'nvarchar(max)'),
+                  1, 2, ''
+              ) AS varchar(2000)
+          ) AS Motivos,
           P.Produto,
           P.Descricao,
           CAST(P.QuantidadeProduzida AS decimal(18,3)) AS [Quantidade produzida],
@@ -682,6 +717,12 @@ async function processarRankingProdutos(pool) {
     const result = await request.query(query);
     const ranking = result.recordset.map((r) => ({
       ferramentas: r.Ferramentas ? r.Ferramentas.trim() : "Sem ferramenta",
+      motivos: r.Motivos
+        ? r.Motivos.split("||").map((s) => {
+            const i = s.lastIndexOf("::");
+            return { motivo: s.slice(0, i).trim(), kg: parseFloat(s.slice(i + 2)) || 0 };
+          })
+        : [],
       produto: r.Produto ? r.Produto.trim() : "",
       descricao: r.Descricao ? r.Descricao.trim() : "",
       quantidadeProduzida: parseFloat(r["Quantidade produzida"] || 0),
@@ -813,6 +854,14 @@ async function main() {
 
   if (isTestEmail) {
     await testEmail();
+    return;
+  }
+
+  // Execuções agendadas rodam apenas de segunda a sexta.
+  const diaSemana = new Date().getDay(); // 0 = domingo, 6 = sábado
+  const execucaoManual = argData || (argMes && argAno) || isForcar;
+  if (!execucaoManual && (diaSemana === 0 || diaSemana === 6)) {
+    log("Fim de semana: consulta não executada (apenas de segunda a sexta). Use --forcar para ignorar.", colors.yellow);
     return;
   }
 

@@ -18,6 +18,7 @@ DECLARE @Refugo TABLE (
     Produto varchar(15),
     Ferramenta varchar(6),
     NomeFerramenta varchar(25),
+    Motivo varchar(60),
     KgRefugo float
 );
 
@@ -36,9 +37,24 @@ DECLARE @Producao TABLE (
         LTRIM(RTRIM(BC.BC_OP)) AS OP,
         LTRIM(RTRIM(BC.BC_FERRAME)) AS Ferramenta,
         LTRIM(RTRIM(BC.BC_NOMEFER)) AS NomeFerramenta,
+
+        -- Motivo lançado no Protheus (SBC.BC_MOTIVO -> SX5 tabela 43).
+        ISNULL(
+            NULLIF(LTRIM(RTRIM(MT.X5_DESCRI)), ''),
+            'Outros'
+        ) AS Motivo,
+
         SUM(ISNULL(BC.BC_QTDDEST, 0)) AS KgRefugo
 
     FROM dbo.SBC010 BC WITH (NOLOCK)
+
+    OUTER APPLY (
+        SELECT TOP (1) X5.X5_DESCRI
+        FROM dbo.SX5010 X5 WITH (NOLOCK)
+        WHERE X5.X5_TABELA = '43'
+          AND RTRIM(X5.X5_CHAVE) = RTRIM(BC.BC_MOTIVO)
+          AND X5.D_E_L_E_T_ <> '*'
+    ) MT
 
     WHERE BC.D_E_L_E_T_ <> '*'
       AND BC.BC_FILIAL = '01'
@@ -50,19 +66,25 @@ DECLARE @Producao TABLE (
         BC.BC_FILIAL,
         LTRIM(RTRIM(BC.BC_OP)),
         LTRIM(RTRIM(BC.BC_FERRAME)),
-        LTRIM(RTRIM(BC.BC_NOMEFER))
+        LTRIM(RTRIM(BC.BC_NOMEFER)),
+        ISNULL(
+            NULLIF(LTRIM(RTRIM(MT.X5_DESCRI)), ''),
+            'Outros'
+        )
 )
 
 INSERT INTO @Refugo (
     Produto,
     Ferramenta,
     NomeFerramenta,
+    Motivo,
     KgRefugo
 )
 SELECT
     LTRIM(RTRIM(O.Produto)),
     R.Ferramenta,
     R.NomeFerramenta,
+    R.Motivo,
     R.KgRefugo
 
 FROM RefugoPorOP R
@@ -203,6 +225,32 @@ SELECT TOP (10)
         )
         AS varchar(1000)
     ) AS Ferramentas,
+
+    -- Refugo por motivo: 'Motivo::kg' separados por '||' (maior kg primeiro).
+    CAST(
+        STUFF(
+            (
+                SELECT
+                    '||' + M.Motivo + '::'
+                    + CONVERT(varchar(30), CAST(M.Kg AS decimal(18,2)))
+
+                FROM (
+                    SELECT F.Motivo, SUM(F.KgRefugo) AS Kg
+                    FROM @Refugo F
+                    WHERE F.Produto = P.Produto
+                    GROUP BY F.Motivo
+                ) M
+
+                ORDER BY M.Kg DESC
+
+                FOR XML PATH(''), TYPE
+            ).value('.', 'nvarchar(max)'),
+            1,
+            2,
+            ''
+        )
+        AS varchar(2000)
+    ) AS Motivos,
 
     P.Produto,
     P.Descricao,
