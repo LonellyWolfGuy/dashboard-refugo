@@ -37,67 +37,9 @@ import {
 export const RankingProdutosRefugo = memo(function RankingProdutosRefugo() {
   const { rankingProdutos, metaRefugo } = useDashboard();
   const [gerandoPDF, setGerandoPDF] = useState(false);
-
-  async function handleGerarPDF() {
-    if (!rankingProdutos) return;
-    try {
-      setGerandoPDF(true);
-      await generateRankingProdutosPDF(rankingProdutos, metaRefugo);
-      toast.success("Relatório de produtos & motivos exportado com sucesso!");
-    } catch (err) {
-      console.error(err);
-      toast.error("Falha ao gerar o relatório em PDF.");
-    } finally {
-      setGerandoPDF(false);
-    }
-  }
-
-  if (!rankingProdutos || !rankingProdutos.produtos || rankingProdutos.produtos.length === 0) {
-    return (
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400">
-              <Flame className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
-                Top 10 Produtos com Maior Rejeição (Últimos 30 Dias)
-              </h3>
-              <p className="text-xs text-slate-400 dark:text-slate-500">
-                Cruzamento analítico de OPs, Ferramentas e Apontamentos do Protheus
-              </p>
-            </div>
-          </div>
-          <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 font-medium">
-            Atualização diária: 07:00 e 18:00
-          </span>
-        </div>
-        <div className="py-10 text-center text-slate-400 dark:text-slate-500">
-          <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
-            Aguardando primeira execução do ranking no servidor
-          </p>
-          <p className="text-xs mt-1 max-w-md mx-auto">
-            Assim que a rotina automática das 07:00 / 18:00 for executada no Protheus, o ranking dos 10 produtos mais
-            críticos com suas ferramentas aparecerá aqui automaticamente.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  const produtos = rankingProdutos.produtos;
-  const dataAtualizacao = new Date(rankingProdutos.atualizado_em).toLocaleString("pt-BR");
   const [tabGrafico, setTabGrafico] = useState<"rejeicao" | "comparativo" | "motivos">("rejeicao");
 
-  // Totais agregados do Top 10
-  const totalRefugoTop10 = produtos.reduce((s, p) => s + p.kgRefugo, 0);
-  const totalProdTop10 = produtos.reduce((s, p) => s + p.kgProducao, 0);
-  const mediaRejeicaoTop10 =
-    totalProdTop10 + totalRefugoTop10 > 0
-      ? (totalRefugoTop10 / (totalProdTop10 + totalRefugoTop10)) * 100
-      : 0;
+  const produtos = rankingProdutos?.produtos ?? [];
 
   // Lista de motivos presentes no Top 10 ordenados por relevância de peso (Kg)
   const motivosTop10 = useMemo(() => {
@@ -134,6 +76,65 @@ export const RankingProdutosRefugo = memo(function RankingProdutosRefugo() {
       return item;
     });
   }, [produtos]);
+
+  async function handleGerarPDF() {
+    if (!rankingProdutos) return;
+    try {
+      setGerandoPDF(true);
+      await generateRankingProdutosPDF(rankingProdutos, metaRefugo);
+      toast.success("Relatório de produtos & motivos exportado com sucesso!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Falha ao gerar o relatório em PDF.");
+    } finally {
+      setGerandoPDF(false);
+    }
+  }
+
+  if (!rankingProdutos || !rankingProdutos.produtos || rankingProdutos.produtos.length === 0) {
+    return (
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-lg bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400">
+              <Flame className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+                Top 10 Produtos com Maior Rejeição (Últimos 30 Dias)
+              </h3>
+              <p className="text-xs text-slate-400 dark:text-slate-500">
+                Cruzamento analítico de OPs, Ferramentas e Apontamentos do Protheus
+              </p>
+            </div>
+          </div>
+          <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 font-medium">
+            Atualização diária: 07:30 e 18:00 (Seg a Sex)
+          </span>
+        </div>
+        <div className="py-10 text-center text-slate-400 dark:text-slate-500">
+          <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
+          <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
+            Aguardando primeira execução do ranking no servidor
+          </p>
+          <p className="text-xs mt-1 max-w-md mx-auto">
+            Assim que a rotina automática das 07:30 / 18:00 for executada no Protheus, o ranking dos 10 produtos mais
+            críticos com suas ferramentas aparecerá aqui automaticamente.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const dataAtualizacao = new Date(rankingProdutos.atualizado_em).toLocaleString("pt-BR");
+
+  // Totais agregados do Top 10
+  const totalRefugoTop10 = produtos.reduce((s, p) => s + p.kgRefugo, 0);
+  const totalProdTop10 = produtos.reduce((s, p) => s + p.kgProducao, 0);
+  const mediaRejeicaoTop10 =
+    totalProdTop10 + totalRefugoTop10 > 0
+      ? (totalRefugoTop10 / (totalProdTop10 + totalRefugoTop10)) * 100
+      : 0;
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-4">
