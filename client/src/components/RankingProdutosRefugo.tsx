@@ -2,11 +2,24 @@
 // Painel Top 10 Produtos & Ferramentas com Maior Rejeição (Últimos 30 Dias)
 // Dados coletados diretamente do TOTVS Protheus (SBC + SC2 + SD3 + SB1)
 
-import { memo, useState } from "react";
+import { memo, useState, useMemo } from "react";
 import { useDashboard } from "@/contexts/DashboardContext";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { generateRankingProdutosPDF } from "@/lib/generatePDF";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  ComposedChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ReferenceLine,
+} from "recharts";
 import {
   Flame,
   Wrench,
@@ -17,6 +30,8 @@ import {
   TrendingUp,
   HelpCircle,
   Printer,
+  BarChart3,
+  Scale,
 } from "lucide-react";
 
 export const RankingProdutosRefugo = memo(function RankingProdutosRefugo() {
@@ -74,6 +89,7 @@ export const RankingProdutosRefugo = memo(function RankingProdutosRefugo() {
 
   const produtos = rankingProdutos.produtos;
   const dataAtualizacao = new Date(rankingProdutos.atualizado_em).toLocaleString("pt-BR");
+  const [tabGrafico, setTabGrafico] = useState<"rejeicao" | "comparativo" | "motivos">("rejeicao");
 
   // Totais agregados do Top 10
   const totalRefugoTop10 = produtos.reduce((s, p) => s + p.kgRefugo, 0);
@@ -82,6 +98,42 @@ export const RankingProdutosRefugo = memo(function RankingProdutosRefugo() {
     totalProdTop10 + totalRefugoTop10 > 0
       ? (totalRefugoTop10 / (totalProdTop10 + totalRefugoTop10)) * 100
       : 0;
+
+  // Lista de motivos presentes no Top 10 ordenados por relevância de peso (Kg)
+  const motivosTop10 = useMemo(() => {
+    const mapa = new Map<string, number>();
+    produtos.forEach((p) => {
+      (p.motivos ?? []).forEach((m) => {
+        if (m.motivo) {
+          mapa.set(m.motivo, (mapa.get(m.motivo) || 0) + m.kg);
+        }
+      });
+    });
+    return Array.from(mapa.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([nome]) => nome);
+  }, [produtos]);
+
+  // Dados formatados para os gráficos Recharts
+  const dadosGrafico = useMemo(() => {
+    return produtos.map((p, idx) => {
+      const item: Record<string, any> = {
+        posicao: idx + 1,
+        codigo: p.produto,
+        rotulo: `${idx + 1}º ${p.produto.length > 10 ? p.produto.slice(0, 9) + "…" : p.produto}`,
+        codigoCompleto: p.produto,
+        descricao: p.descricao,
+        ferramentas: p.ferramentas,
+        kgProducao: Number(p.kgProducao.toFixed(1)),
+        kgRefugo: Number(p.kgRefugo.toFixed(1)),
+        rejeicaoPct: Number(p.rejeicaoPct.toFixed(2)),
+      };
+      (p.motivos ?? []).forEach((m) => {
+        item[m.motivo] = Number(m.kg.toFixed(1));
+      });
+      return item;
+    });
+  }, [produtos]);
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-4">
@@ -318,6 +370,193 @@ export const RankingProdutosRefugo = memo(function RankingProdutosRefugo() {
         </table>
       </div>
 
+      {/* ─── Gráfico Visual Integrado do Top 10 ────────────────────────────────────── */}
+      <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-red-500" />
+              <span>Análise Gráfica dos Itens Críticos</span>
+            </h4>
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              Visualização comparativa de perdas, produção e motivos entre os 10 produtos
+            </p>
+          </div>
+
+          {/* Abas de Seleção de Gráfico */}
+          <div className="inline-flex p-1 bg-slate-100 dark:bg-slate-800/80 rounded-lg text-xs font-medium self-start sm:self-auto flex-wrap">
+            <button
+              onClick={() => setTabGrafico("rejeicao")}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer",
+                tabGrafico === "rejeicao"
+                  ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm font-semibold"
+                  : "text-slate-500 hover:text-slate-900 dark:text-slate-400"
+              )}
+            >
+              <BarChart3 className="w-3.5 h-3.5 text-red-500" />
+              <span>Perda (Kg) vs % Rejeição</span>
+            </button>
+
+            <button
+              onClick={() => setTabGrafico("comparativo")}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer",
+                tabGrafico === "comparativo"
+                  ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm font-semibold"
+                  : "text-slate-500 hover:text-slate-900 dark:text-slate-400"
+              )}
+            >
+              <Scale className="w-3.5 h-3.5 text-blue-500" />
+              <span>Produção vs Refugo</span>
+            </button>
+
+            <button
+              onClick={() => setTabGrafico("motivos")}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer",
+                tabGrafico === "motivos"
+                  ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm font-semibold"
+                  : "text-slate-500 hover:text-slate-900 dark:text-slate-400"
+              )}
+            >
+              <Layers className="w-3.5 h-3.5 text-amber-500" />
+              <span>Detalhamento por Motivos</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Área do Gráfico */}
+        <div className="bg-slate-50/50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-800/80 rounded-xl p-3 sm:p-4">
+          <div className="h-[320px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              {tabGrafico === "rejeicao" ? (
+                <ComposedChart data={dadosGrafico} margin={{ top: 15, right: 15, left: -10, bottom: 35 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:opacity-20" />
+                  <XAxis
+                    dataKey="rotulo"
+                    stroke="#94a3b8"
+                    tick={{ fontSize: 11 }}
+                    interval={0}
+                    angle={-25}
+                    textAnchor="end"
+                  />
+                  <YAxis
+                    yAxisId="kg"
+                    stroke="#dc2626"
+                    tick={{ fontSize: 11 }}
+                    unit=" Kg"
+                    tickFormatter={(v) => Number(v).toLocaleString("pt-BR")}
+                  />
+                  <YAxis
+                    yAxisId="pct"
+                    orientation="right"
+                    stroke="#f59e0b"
+                    tick={{ fontSize: 11 }}
+                    unit="%"
+                    domain={[0, "auto"]}
+                  />
+                  <Tooltip content={<CustomTooltipRanking />} />
+                  <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: "12px" }} />
+                  <ReferenceLine
+                    yAxisId="pct"
+                    y={metaRefugo}
+                    stroke="#10b981"
+                    strokeDasharray="4 4"
+                    strokeWidth={1.5}
+                    label={{
+                      value: `Meta: ${metaRefugo}%`,
+                      fill: "#10b981",
+                      fontSize: 11,
+                      position: "insideTopRight",
+                    }}
+                  />
+                  <Bar
+                    yAxisId="kg"
+                    dataKey="kgRefugo"
+                    name="Refugo (Kg)"
+                    fill="#dc2626"
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Line
+                    yAxisId="pct"
+                    type="monotone"
+                    dataKey="rejeicaoPct"
+                    name="% Rejeição"
+                    stroke="#f59e0b"
+                    strokeWidth={2.5}
+                    dot={{ r: 4, fill: "#f59e0b" }}
+                    activeDot={{ r: 6 }}
+                  />
+                </ComposedChart>
+              ) : tabGrafico === "comparativo" ? (
+                <BarChart data={dadosGrafico} margin={{ top: 15, right: 15, left: -10, bottom: 35 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:opacity-20" />
+                  <XAxis
+                    dataKey="rotulo"
+                    stroke="#94a3b8"
+                    tick={{ fontSize: 11 }}
+                    interval={0}
+                    angle={-25}
+                    textAnchor="end"
+                  />
+                  <YAxis
+                    stroke="#64748b"
+                    tick={{ fontSize: 11 }}
+                    unit=" Kg"
+                    tickFormatter={(v) => Number(v).toLocaleString("pt-BR")}
+                  />
+                  <Tooltip content={<CustomTooltipRanking />} />
+                  <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: "12px" }} />
+                  <Bar
+                    dataKey="kgProducao"
+                    name="Produção (Kg)"
+                    fill="#0284c7"
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="kgRefugo"
+                    name="Refugo (Kg)"
+                    fill="#dc2626"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              ) : (
+                <BarChart data={dadosGrafico} margin={{ top: 15, right: 15, left: -10, bottom: 35 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:opacity-20" />
+                  <XAxis
+                    dataKey="rotulo"
+                    stroke="#94a3b8"
+                    tick={{ fontSize: 11 }}
+                    interval={0}
+                    angle={-25}
+                    textAnchor="end"
+                  />
+                  <YAxis
+                    stroke="#64748b"
+                    tick={{ fontSize: 11 }}
+                    unit=" Kg"
+                    tickFormatter={(v) => Number(v).toLocaleString("pt-BR")}
+                  />
+                  <Tooltip content={<CustomTooltipRanking />} />
+                  <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: "12px" }} />
+                  {motivosTop10.map((motivo, mIdx) => (
+                    <Bar
+                      key={motivo}
+                      dataKey={motivo}
+                      name={motivo}
+                      stackId="a"
+                      fill={CORES_MOTIVOS[mIdx % CORES_MOTIVOS.length]}
+                      radius={mIdx === motivosTop10.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                    />
+                  ))}
+                </BarChart>
+              )}
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
       {/* Nota de Engenharia de Processos */}
       <div className="flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500 pt-1">
         <span className="flex items-center gap-1">
@@ -325,11 +564,87 @@ export const RankingProdutosRefugo = memo(function RankingProdutosRefugo() {
           Fórmula: Rejeição % = (Kg Refugo / (Kg Produção + Kg Refugo)) × 100
         </span>
         <span className="font-semibold text-slate-600 dark:text-slate-400">
-          TOTVS Protheus &bull; Sincronização automática às 07:00 e 18:00
+          TOTVS Protheus &bull; Sincronização automática às 07:30 e 18:00 (Seg a Sex)
         </span>
       </div>
     </div>
   );
 });
+
+// Paleta industrial para os motivos empilhados
+const CORES_MOTIVOS = [
+  "#dc2626", // vermelho forte
+  "#ea580c", // laranja
+  "#f59e0b", // âmbar
+  "#0284c7", // azul
+  "#8b5cf6", // roxo
+  "#059669", // esmeralda
+  "#ec4899", // rosa
+  "#06b6d4", // ciano
+  "#64748b", // ardósia
+  "#d97706", // ouro
+];
+
+// Tooltip rico para os gráficos do Top 10
+function CustomTooltipRanking({ active, payload }: any) {
+  if (!active || !payload || !payload.length) return null;
+  const d = payload[0].payload;
+  const motivosItems = payload.filter(
+    (p: any) =>
+      p.dataKey !== "kgRefugo" &&
+      p.dataKey !== "kgProducao" &&
+      p.dataKey !== "rejeicaoPct" &&
+      Number(p.value) > 0
+  );
+
+  return (
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3 shadow-xl max-w-xs text-xs space-y-2 z-50">
+      <div className="border-b border-slate-100 dark:border-slate-800 pb-1.5">
+        <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-100">
+          <span className="text-red-600 dark:text-red-400 font-extrabold">{d.posicao}º</span>
+          <span className="font-mono">{d.codigoCompleto || d.codigo}</span>
+        </div>
+        <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">{d.descricao}</p>
+        <p className="text-[10px] text-slate-400 font-medium mt-0.5">Ferramenta: {d.ferramentas}</p>
+      </div>
+
+      <div className="space-y-1">
+        <div className="flex justify-between items-center text-slate-600 dark:text-slate-300">
+          <span>Produção Total:</span>
+          <span className="font-mono font-semibold">
+            {d.kgProducao?.toLocaleString("pt-BR", { minimumFractionDigits: 1 })} Kg
+          </span>
+        </div>
+        <div className="flex justify-between items-center text-red-600 dark:text-red-400 font-bold">
+          <span>Refugo Total:</span>
+          <span className="font-mono">
+            {d.kgRefugo?.toLocaleString("pt-BR", { minimumFractionDigits: 1 })} Kg
+          </span>
+        </div>
+        <div className="flex justify-between items-center text-amber-600 dark:text-amber-400 font-bold">
+          <span>% Rejeição:</span>
+          <span className="font-mono">{d.rejeicaoPct?.toFixed(2)}%</span>
+        </div>
+      </div>
+
+      {motivosItems.length > 0 && (
+        <div className="border-t border-slate-100 dark:border-slate-800 pt-1.5 space-y-1">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Motivos no Item:</p>
+          {motivosItems.map((p: any) => (
+            <div key={p.dataKey} className="flex justify-between items-center text-[11px]">
+              <span className="text-slate-600 dark:text-slate-300 truncate max-w-[150px] flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ backgroundColor: p.color }} />
+                {p.name}:
+              </span>
+              <span className="font-mono font-semibold text-slate-900 dark:text-slate-100">
+                {Number(p.value).toLocaleString("pt-BR", { minimumFractionDigits: 1 })} Kg
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default RankingProdutosRefugo;
