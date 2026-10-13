@@ -1,6 +1,6 @@
-# 📊 Dashboard de Controle de Refugo — V2.7
+# 📊 Dashboard de Controle de Refugo — V2.8
 
-> **Status: 🟢 Versão 2.7 Estável** (Outubro 2026) — **Implatec Perfis** (Criador: Thiago Fischer)
+> **Status: 🟢 Versão 2.8 Estável** (Outubro 2026) — **Implatec Perfis** (Criador: Thiago Fischer)
 
 [![Deploy on Vercel](https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel)](https://vercel.com)
 [![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?logo=supabase)](https://supabase.com)
@@ -12,14 +12,18 @@ Sistema web para controle e análise de refugo industrial desenvolvido para a **
 
 ---
 
-## 🚀 Novidades da Versão Atual (V2.7 — Outubro 2026)
+## 🚀 Novidades da Versão Atual (V2.8 — Outubro 2026)
 
-- **Detalhamento de Motivos de Refugo no Ranking (SBC010 + SX5010)** — A consulta analítica de 30 dias agora extrai os motivos diretamente dos apontamentos da tabela `SBC010` (`BC_MOTIVO`) e cruza com a tabela de cadastros gerais do Protheus `SX5010` (Tabela `43`), exibindo a lista de motivos reais com seus respectivos pesos em Kg e percentual de perda para cada produto do Top 10.
-- **Relatório Executivo em PDF do Ranking (Padrão Implatec)** — Novo botão dedicado *"Imprimir Relatório (PDF)"* diretamente no card do ranking, gerando documento oficial A4 Paisagem com logo da Implatec, resumo executivo, tabela analítica com ferramentas/moldes e detalhamento completo de motivos por produto para auditoria.
-- **Agendamento Inteligente e Fim de Semana (Segunda a Sexta)** — O agendador do Windows (`agendar-tarefa.ps1`) e o script `sync.js` foram calibrados para executar de segunda a sexta-feira (07:30 e 18:00), com trava automática para não rodar aos sábados e domingos em execuções de rotina.
-- **Disparo de E-mail Centralizado às 18:00** — Envio do relatório diário corporativo via SMTP cPanel concentrado exclusivamente no fechamento do dia útil às 18:00, mantendo a sincronização da manhã (07:30) limpa e sem notificações prematuras.
-- **Novo Usuário Operacional de Qualidade** — Provisionamento do usuário `qualidade@implatec.com.br` no Supabase Auth com confirmação direta de e-mail para acesso da equipe ao painel.
-- **Ranking Top 10 Produtos & Ferramentas Mais Refugados** — Painel dedicado que consome a consulta oficial do ERP TOTVS Protheus (`SBC010`, `SC2010`, `SD3010`, `SB1010`), exibindo os itens com maior índice de perda (Kg refugo / Kg produzido), códigos das ferramentas/moldes envolvidos, unidades, pesos e barras visuais de severidade.
+- **Painel Gráfico Interativo com 3 Visões no Top 10 Produtos** — Logo abaixo da tabela do Top 10, um painel visual dinâmico com seletor de abas:
+  1. *Perda (Kg) vs % Rejeição:* Barras de refugo em Kg comparadas com a linha da taxa de perda e a linha de meta corporativa tracejada.
+  2. *Produção vs Refugo:* Comparativo volumétrico direto entre massa processada e perda.
+  3. *Detalhamento por Motivos:* Gráfico de barras empilhadas fatiado pelas causas reais de refugo (SBC/SX5).
+  - **Exibição Oficial de Ferramentas:** O eixo X apresenta a ferramenta/molde completa e sem cortes para identificação imediata na fábrica.
+- **Slide do Top 10 no Modo TV Industrial** — A rotação do Modo TV (tela cheia para a fábrica) agora inclui automaticamente o slide analítico do Top 10 Produtos & Ferramentas, com gráfico em tela cheia, relógio, KPIs em destaque e os 3 itens mais críticos com seus principais defeitos apontados.
+- **Detalhamento de Motivos de Refugo no Ranking (SBC010 + SX5010)** — A consulta analítica de 30 dias extrai os motivos diretamente dos apontamentos da tabela `SBC010` (`BC_MOTIVO`) e cruza com os cadastros gerais `SX5010` (Tabela `43`).
+- **Relatório Executivo em PDF do Ranking (Padrão Implatec)** — Botão dedicado *"Imprimir Relatório (PDF)"* gerando documento oficial A4 Paisagem com logo da Implatec, resumo executivo, tabela com moldes e motivos para auditoria.
+- **Agendamento Inteligente e Fim de Semana (Segunda a Sexta)** — Sincronização automática calibrada para executar nos dias úteis (07:30 e 18:00), com trava automática aos sábados e domingos e e-mail corporativo disparado exclusivamente às 18:00.
+- **Usuário Operacional:** `qualidade@implatec.com.br` ativo para gestão do setor de qualidade.
 
 ---
 

@@ -10,7 +10,7 @@ export interface VideoItem {
   legenda?: string;
 }
 
-export type TipoSlide = "dashboard" | "clima" | "aniversariantes" | "imagem" | "video";
+export type TipoSlide = "dashboard" | "ranking" | "clima" | "aniversariantes" | "imagem" | "video";
 
 export interface TVModeState {
   isTVMode: boolean;
@@ -141,6 +141,13 @@ export function useTVMode(): TVModeState {
     const vids = videosRef.current;
 
     if (tipoAtualRef.current === "dashboard") {
+      tipoAtualRef.current = "ranking";
+      setTipoSlide("ranking");
+      indiceImagemRef.current = 0;
+      setIndiceImagem(0);
+      indiceVideoRef.current = 0;
+      setIndiceVideo(0);
+    } else if (tipoAtualRef.current === "ranking") {
       tipoAtualRef.current = "clima";
       setTipoSlide("clima");
       indiceImagemRef.current = 0;
@@ -233,7 +240,7 @@ export function useTVMode(): TVModeState {
     intervalRef.current = setInterval(() => {
       const cfg = configRef.current;
       const duracao =
-        tipoAtualRef.current === "dashboard" ? cfg.segDashboard * 1000 :
+        (tipoAtualRef.current === "dashboard" || tipoAtualRef.current === "ranking") ? cfg.segDashboard * 1000 :
         tipoAtualRef.current === "clima" ? SEG_CLIMA * 1000 :
         tipoAtualRef.current === "aniversariantes" ? SEG_ANIVERSARIANTES * 1000 :
         tipoAtualRef.current === "video" ? cfg.segVideo * 1000 :

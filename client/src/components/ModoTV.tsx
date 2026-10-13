@@ -14,6 +14,17 @@ import { useTVMode } from "@/hooks/useTVMode";
 import { MESES_NOMES, aniversariantesNascimentoDoMes, aniversariantesTempoCasaDoMes, anosDeCasa } from "@/lib/initialData";
 import { X, ChevronRight, AlertTriangle, CheckCircle2, Cloud, Cake, Trophy, CalendarDays, Sparkles } from "lucide-react";
 import { buscarClima, descricaoTempo, iconeTempo, DadosClima } from "@/services/weatherService";
+import {
+  ResponsiveContainer,
+  ComposedChart,
+  Bar,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Legend,
+  ReferenceLine,
+} from "recharts";
 
 // ─── Hook compartilhado de relógio ────────────────────────────────────────────
 
@@ -338,6 +349,238 @@ function SlideDashboard() {
         height: 4,
         background: `linear-gradient(90deg, ${p.faixa}, ${p.faixa}AA, transparent)`,
       }} />
+    </div>
+  );
+}
+
+// ─── Sub-componente: Slide de Ranking de Produtos (Top 10) ───────────────────
+
+function SlideRankingProdutos() {
+  const { rankingProdutos, metaRefugo } = useDashboard();
+  const produtos = rankingProdutos?.produtos ?? [];
+
+  const totalRefugo = produtos.reduce((s, p) => s + p.kgRefugo, 0);
+  const totalProd = produtos.reduce((s, p) => s + p.kgProducao, 0);
+  const totalGeral = totalProd + totalRefugo;
+  const mediaRejeicao = totalGeral > 0 ? (totalRefugo / totalGeral) * 100 : 0;
+
+  const dadosGrafico = useMemo(() => {
+    return produtos.map((p, idx) => {
+      const ferramentaCompleta = p.ferramentas && p.ferramentas !== "Sem ferramenta" ? p.ferramentas : p.produto;
+      return {
+        posicao: idx + 1,
+        rotulo: `${idx + 1}º ${ferramentaCompleta}`,
+        ferramenta: ferramentaCompleta,
+        produto: p.produto,
+        descricao: p.descricao,
+        kgRefugo: Number(p.kgRefugo.toFixed(1)),
+        rejeicaoPct: Number(p.rejeicaoPct.toFixed(2)),
+      };
+    });
+  }, [produtos]);
+
+  const top3 = produtos.slice(0, 3);
+
+  return (
+    <div className="flex flex-col w-full h-full overflow-hidden relative" style={{ background: "#111827" }}>
+      {/* Glow de fundo */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-40"
+        style={{
+          background: "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(220, 38, 38, 0.25), transparent)",
+        }}
+      />
+
+      {/* Header */}
+      <div className="relative z-10 flex items-start justify-between px-10 pt-6 pb-2">
+        <div>
+          <div className="flex items-center gap-2">
+            <span
+              className="uppercase tracking-widest font-bold px-2.5 py-0.5 rounded-full"
+              style={{
+                color: "#f87171",
+                background: "rgba(220, 38, 38, 0.2)",
+                fontSize: "clamp(0.75rem, 1vw, 0.95rem)",
+                border: "1px solid rgba(220, 38, 38, 0.4)",
+              }}
+            >
+              TOTVS Protheus • Últimos 30 Dias
+            </span>
+          </div>
+          <h1
+            className="font-black text-white leading-none mt-2 flex items-center gap-3"
+            style={{ fontSize: "clamp(1.8rem, 2.8vw, 2.5rem)" }}
+          >
+            <span>Top 10 Produtos & Ferramentas</span>
+            <span style={{ color: "#ef4444" }}>Mais Refugados</span>
+          </h1>
+        </div>
+        <RelogioTV />
+      </div>
+
+      {/* KPIs Rápidos do Top 10 */}
+      <div className="relative z-10 grid grid-cols-4 gap-4 px-10 py-2">
+        <div
+          className="rounded-xl px-5 py-3"
+          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(239,68,68,0.3)" }}
+        >
+          <p className="uppercase tracking-wider font-semibold text-red-400 text-xs">Refugo Top 10</p>
+          <p className="font-mono font-black text-white leading-tight mt-0.5 text-2xl">
+            {totalRefugo.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}{" "}
+            <span className="text-sm font-normal text-slate-400">Kg</span>
+          </p>
+        </div>
+
+        <div
+          className="rounded-xl px-5 py-3"
+          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+        >
+          <p className="uppercase tracking-wider font-semibold text-slate-400 text-xs">Produção Top 10</p>
+          <p className="font-mono font-black text-white leading-tight mt-0.5 text-2xl">
+            {totalProd.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}{" "}
+            <span className="text-sm font-normal text-slate-400">Kg</span>
+          </p>
+        </div>
+
+        <div
+          className="rounded-xl px-5 py-3"
+          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(245,158,11,0.3)" }}
+        >
+          <p className="uppercase tracking-wider font-semibold text-amber-400 text-xs">Média Rejeição</p>
+          <p className="font-mono font-black text-amber-400 leading-tight mt-0.5 text-2xl">
+            {mediaRejeicao.toFixed(1)}%
+          </p>
+        </div>
+
+        <div
+          className="rounded-xl px-5 py-3"
+          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(16,185,129,0.3)" }}
+        >
+          <p className="uppercase tracking-wider font-semibold text-emerald-400 text-xs">Meta Corporativa</p>
+          <p className="font-mono font-black text-emerald-400 leading-tight mt-0.5 text-2xl">
+            Até {metaRefugo}%
+          </p>
+        </div>
+      </div>
+
+      {/* Gráfico Central */}
+      <div className="relative z-10 flex-1 min-h-0 px-10 py-1">
+        <div
+          className="w-full h-full rounded-2xl p-4 flex flex-col"
+          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}
+        >
+          <div className="flex-1 min-h-0 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={dadosGrafico} margin={{ top: 10, right: 20, left: 0, bottom: 35 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                <XAxis
+                  dataKey="rotulo"
+                  stroke="#94a3b8"
+                  tick={{ fontSize: 13, fill: "#e2e8f0", fontWeight: 700 }}
+                  interval={0}
+                  angle={-22}
+                  textAnchor="end"
+                />
+                <YAxis
+                  yAxisId="kg"
+                  stroke="#ef4444"
+                  tick={{ fontSize: 12, fill: "#f87171" }}
+                  unit=" Kg"
+                  tickFormatter={(v) => Number(v).toLocaleString("pt-BR")}
+                />
+                <YAxis
+                  yAxisId="pct"
+                  orientation="right"
+                  stroke="#f59e0b"
+                  tick={{ fontSize: 12, fill: "#fbbf24" }}
+                  unit="%"
+                  domain={[0, "auto"]}
+                />
+                <Legend
+                  verticalAlign="top"
+                  height={32}
+                  iconType="circle"
+                  wrapperStyle={{ fontSize: "13px", color: "#ffffff", paddingBottom: "8px" }}
+                />
+                <ReferenceLine
+                  yAxisId="pct"
+                  y={metaRefugo}
+                  stroke="#10b981"
+                  strokeDasharray="4 4"
+                  strokeWidth={2}
+                  label={{
+                    value: `Meta: ${metaRefugo}%`,
+                    fill: "#10b981",
+                    fontSize: 13,
+                    position: "insideTopRight",
+                  }}
+                />
+                <Bar
+                  yAxisId="kg"
+                  dataKey="kgRefugo"
+                  name="Refugo (Kg)"
+                  fill="#ef4444"
+                  radius={[6, 6, 0, 0]}
+                />
+                <Line
+                  yAxisId="pct"
+                  type="monotone"
+                  dataKey="rejeicaoPct"
+                  name="% Rejeição"
+                  stroke="#f59e0b"
+                  strokeWidth={3}
+                  dot={{ r: 5, fill: "#f59e0b" }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Faixa Inferior com Destaques dos Top 3 */}
+      {top3.length > 0 && (
+        <div className="relative z-10 px-10 pb-4 pt-1">
+          <div className="grid grid-cols-3 gap-3">
+            {top3.map((p, idx) => {
+              const motivoPrincipal = p.motivos && p.motivos.length > 0 ? p.motivos[0] : null;
+              return (
+                <div
+                  key={p.produto}
+                  className="rounded-xl px-4 py-2 flex items-center justify-between"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                >
+                  <div className="min-w-0 pr-2">
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className="w-5 h-5 rounded-full flex items-center justify-center font-black text-xs"
+                        style={{
+                          background: idx === 0 ? "rgba(239,68,68,0.25)" : "rgba(245,158,11,0.25)",
+                          color: idx === 0 ? "#f87171" : "#fbbf24",
+                        }}
+                      >
+                        {idx + 1}º
+                      </span>
+                      <span className="font-mono font-bold text-white text-xs truncate">
+                        {p.ferramentas}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">({p.produto})</span>
+                    </div>
+                    {motivoPrincipal && (
+                      <p className="text-[11px] text-slate-300 truncate mt-0.5">
+                        Defeito: <span className="text-red-400 font-semibold">{motivoPrincipal.motivo}</span> ({motivoPrincipal.kg} Kg)
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-mono font-black text-red-400 text-sm">{p.kgRefugo.toLocaleString("pt-BR")} Kg</p>
+                    <p className="font-mono font-bold text-amber-400 text-xs">{p.rejeicaoPct.toFixed(1)}%</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -936,19 +1179,21 @@ export default function ModoTV({ tvState }: ModoTVProps) {
     };
   }, []);
 
-  const totalSlides = useMemo(() => (temAniversariantes ? 3 : 2) + totalImagens + totalVideos, [temAniversariantes, totalImagens, totalVideos]);
-  const baseImagem = temAniversariantes ? 3 : 2;
+  const totalSlides = useMemo(() => (temAniversariantes ? 4 : 3) + totalImagens + totalVideos, [temAniversariantes, totalImagens, totalVideos]);
+  const baseImagem = temAniversariantes ? 4 : 3;
   const baseVideo = baseImagem + totalImagens;
   const indiceGlobal =
     tipoSlide === "dashboard" ? 0 :
-    tipoSlide === "clima" ? 1 :
-    tipoSlide === "aniversariantes" ? 2 :
+    tipoSlide === "ranking" ? 1 :
+    tipoSlide === "clima" ? 2 :
+    tipoSlide === "aniversariantes" ? 3 :
     tipoSlide === "video" ? indiceVideo + baseVideo :
     indiceImagem + baseImagem;
   const dots = useMemo(() => Array.from({ length: totalSlides }), [totalSlides]);
 
   const barCor =
     tipoSlide === "dashboard" ? "linear-gradient(90deg,#1d4ed8,#60a5fa)" :
+    tipoSlide === "ranking" ? "linear-gradient(90deg,#dc2626,#f59e0b)" :
     tipoSlide === "clima" ? "linear-gradient(90deg,#7c3aed,#a78bfa)" :
     tipoSlide === "aniversariantes" ? "linear-gradient(90deg,#ec4899,#a855f7)" :
     tipoSlide === "video" ? "linear-gradient(90deg,#dc2626,#f87171)" :
@@ -960,6 +1205,8 @@ export default function ModoTV({ tvState }: ModoTVProps) {
       <div key={fadeKey} className="flex-1 min-h-0 overflow-hidden relative" style={{ animation: "tvFadeIn 0.7s cubic-bezier(0.16,1,0.3,1)" }}>
         {tipoSlide === "dashboard" ? (
           <SlideDashboard />
+        ) : tipoSlide === "ranking" ? (
+          <SlideRankingProdutos />
         ) : tipoSlide === "clima" ? (
           <SlideClima dadosClima={dadosClima} />
         ) : tipoSlide === "aniversariantes" ? (
