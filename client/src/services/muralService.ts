@@ -24,17 +24,10 @@ export function getUrlOtimizada(storagePath: string): string {
   const cached = urlCache.get(storagePath);
   if (cached) return cached;
 
+  // Sem `transform`: a transformação de imagens do Supabase exige plano Pro
+  // e, quando indisponível, a imagem nunca carrega. O upload já redimensiona.
   const nomeArquivo = storagePath.replace(/^mural\//, "");
-  const { data } = supabase.storage
-    .from("mural")
-    .getPublicUrl(nomeArquivo, {
-      transform: {
-        width: 1920,
-        height: 1080,
-        resize: "contain",
-        quality: 80,
-      },
-    });
+  const { data } = supabase.storage.from("mural").getPublicUrl(nomeArquivo);
   urlCache.set(storagePath, data.publicUrl);
   return data.publicUrl;
 }
