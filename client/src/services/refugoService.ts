@@ -39,6 +39,24 @@ export async function lerRegistros(ano: number, mes?: number): Promise<DailyReco
   }));
 }
 
+export async function lerRegistrosPeriodo(dataInicio: string, dataFim: string): Promise<DailyRecord[]> {
+  const { data, error } = await supabase
+    .from("registros")
+    .select("id, data, producao, refugo, motivos")
+    .gte("data", dataInicio)
+    .lte("data", dataFim)
+    .order("data", { ascending: true });
+
+  if (error) throw new Error(`[Supabase] lerRegistrosPeriodo: ${error.message}`);
+  return (data ?? []).map((r: any) => ({
+    id: String(r.id),
+    data: r.data,
+    producao: Number(r.producao),
+    refugo: Number(r.refugo),
+    motivos: (Array.isArray(r.motivos) ? r.motivos : []) as any,
+  }));
+}
+
 export async function inserirRegistro(mes: number, ano: number, reg: Omit<DailyRecord, "id">): Promise<DailyRecord> {
   const novoRegistro: DailyRecord = { ...reg, id: gerarId() };
   const { error } = await supabase.from("registros").insert({

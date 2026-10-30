@@ -4,10 +4,11 @@
 import { useDashboard } from "@/contexts/DashboardContext";
 import { MESES_NOMES } from "@/lib/initialData";
 import { cn } from "@/lib/utils";
-import { Settings } from "lucide-react";
+import { Settings, Download } from "lucide-react";
 
 interface SidebarProps {
   onOpenSettings: () => void;
+  onOpenExport?: () => void;
 }
 
 function getStatusColor(percent: number, meta: number): string {
@@ -24,7 +25,7 @@ function getStatusTextColor(percent: number, meta: number): string {
   return "text-red-600 dark:text-red-400";
 }
 
-export default function Sidebar({ onOpenSettings }: SidebarProps) {
+export default function Sidebar({ onOpenSettings, onOpenExport }: SidebarProps) {
   const { mesAtual, setMesAtual, anoAtual, getTotaisMes, getTotaisAnuais, metaRefugo } = useDashboard();
   const totaisAnuais = getTotaisAnuais();
 
@@ -138,9 +139,18 @@ export default function Sidebar({ onOpenSettings }: SidebarProps) {
           <div className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
           <span>&gt; {metaRefugo}% Crítico</span>
         </div>
+        {onOpenExport && (
+          <button
+            onClick={onOpenExport}
+            className="mt-2 w-full flex items-center gap-2 px-2 py-1.5 text-xs text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 dark:hover:text-emerald-100 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-md transition-colors cursor-pointer font-medium"
+          >
+            <Download className="w-3.5 h-3.5 text-emerald-600" />
+            Exportar Relatórios
+          </button>
+        )}
         <button
           onClick={onOpenSettings}
-          className="mt-2 w-full flex items-center gap-2 px-2 py-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+          className="mt-1 w-full flex items-center gap-2 px-2 py-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors cursor-pointer"
         >
           <Settings className="w-3.5 h-3.5" />
           Configurações

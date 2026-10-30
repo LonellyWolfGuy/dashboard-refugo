@@ -12,6 +12,7 @@ import GraficoMensal from "@/components/GraficoMensal";
 import GraficoAnual from "@/components/GraficoAnual";
 import TabelaRegistros from "@/components/TabelaRegistros";
 import ModalConfiguracoes from "@/components/ModalConfiguracoes";
+import ModalExportarRelatorio from "@/components/ModalExportarRelatorio";
 import AnaliseMotivoRefugo from "@/components/AnaliseMotivoRefugo";
 import RankingProdutosRefugo from "@/components/RankingProdutosRefugo";
 import ModoTV from "@/components/ModoTV";
@@ -58,28 +59,19 @@ export default function Home() {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
   const [modalConfig, setModalConfig] = useState(false);
+  const [modalExportar, setModalExportar] = useState(false);
+  const [tipoExportar, setTipoExportar] = useState<"todos" | "pdf" | "excel">("todos");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [exportandoPDF, setExportandoPDF] = useState(false);
   const tvState = useTVMode();
 
-  async function handleExportPDF() {
-    try {
-      setExportandoPDF(true);
-      const mesData = getMesData(mesAtual);
-      await generateMonthlyPDF(mesAtual, anoAtual, mesData.registros, metaRefugo);
-      toast.success(`Relatório de ${MESES_NOMES[mesAtual - 1]} exportado com sucesso!`);
-    } catch (error) {
-      console.error(error);
-      toast.error("Erro ao gerar PDF. Tente novamente.");
-    } finally {
-      setExportandoPDF(false);
-    }
+  function handleExportPDF() {
+    setTipoExportar("pdf");
+    setModalExportar(true);
   }
 
   function handleExportExcel() {
-    const mesData = getMesData(mesAtual);
-    exportMonthlyCSV(mesAtual, anoAtual, mesData.registros, metaRefugo);
-    toast.success(`Planilha Excel de ${MESES_NOMES[mesAtual - 1]} exportada!`);
+    setTipoExportar("excel");
+    setModalExportar(true);
   }
 
   function irMesAnterior() {
@@ -95,7 +87,13 @@ export default function Home() {
       {/* Sidebar Desktop */}
       <div className="hidden lg:block shrink-0">
         <div className="sticky top-0 h-screen overflow-y-auto">
-          <Sidebar onOpenSettings={() => setModalConfig(true)} />
+          <Sidebar
+            onOpenSettings={() => setModalConfig(true)}
+            onOpenExport={() => {
+              setTipoExportar("todos");
+              setModalExportar(true);
+            }}
+          />
         </div>
       </div>
 
@@ -107,6 +105,11 @@ export default function Home() {
             <Sidebar
               onOpenSettings={() => {
                 setModalConfig(true);
+                setSidebarOpen(false);
+              }}
+              onOpenExport={() => {
+                setTipoExportar("todos");
+                setModalExportar(true);
                 setSidebarOpen(false);
               }}
             />
@@ -183,8 +186,8 @@ export default function Home() {
               {/* Exportar Excel */}
               <button
                 onClick={handleExportExcel}
-                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 rounded-lg transition-colors"
-                title="Exportar para Excel (.csv)"
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 rounded-lg transition-colors cursor-pointer"
+                title="Exportar lançamentos em Excel (.xlsx / .csv)"
               >
                 <FileSpreadsheet className="w-3.5 h-3.5" />
                 <span className="hidden md:inline">Excel</span>
@@ -193,9 +196,8 @@ export default function Home() {
               {/* Exportar PDF */}
               <button
                 onClick={handleExportPDF}
-                disabled={exportandoPDF}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
-                title="Exportar relatório em PDF"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg transition-colors shadow-xs cursor-pointer"
+                title="Exportar relatório em PDF por período"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">PDF</span>
@@ -283,6 +285,15 @@ export default function Home() {
 
       {/* Modal de Configurações */}
       {modalConfig && <ModalConfiguracoes onClose={() => setModalConfig(false)} />}
+
+      {/* Modal de Exportação por Período (PDF / Excel) */}
+      {modalExportar && (
+        <ModalExportarRelatorio
+          aberto={modalExportar}
+          onClose={() => setModalExportar(false)}
+          tipoPadrao={tipoExportar}
+        />
+      )}
 
       {/* Modo TV (tela cheia) */}
       {tvState.isTVMode && <ModoTV tvState={tvState} />}

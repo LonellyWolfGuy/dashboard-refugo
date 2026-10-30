@@ -1,13 +1,18 @@
-// Utilitário para gerar PDF do relatório mensal com logo Implatec e tabela completa
+// Utilitário para gerar PDF de relatório de refugo por período com logo Implatec e tabela completa
 
 import { MESES_NOMES } from "./initialData";
 
-export async function generateMonthlyPDF(
-  mesAtual: number,
-  anoAtual: number,
-  registros: any[],
-  metaRefugo: number
-) {
+export interface PeriodPDFOptions {
+  tituloPeriodo: string;
+  subtitulo?: string;
+  dataInicio?: string;
+  dataFim?: string;
+  registros: any[];
+  metaRefugo: number;
+  nomeArquivo?: string;
+}
+
+export async function generatePeriodReportPDF(options: PeriodPDFOptions) {
   try {
     const { jsPDF } = await import("jspdf");
 
@@ -34,91 +39,137 @@ export async function generateMonthlyPDF(
     }
 
     // ===== TÍTULO =====
-    doc.setFontSize(16);
+    doc.setFontSize(15);
     doc.setTextColor(13, 122, 46);
-    doc.text(`CONTROLE DE REFUGO ${anoAtual}`, pageWidth / 2, y + 8, { align: "center" });
-    doc.setFontSize(12);
-    doc.setTextColor(100, 100, 100);
-    doc.text(
-      `Relatório de ${MESES_NOMES[mesAtual - 1]} ${anoAtual}`,
-      pageWidth / 2,
-      y + 15,
-      { align: "center" }
-    );
-    y += 25;
-
-    // ===== TOTAIS — calculados a partir dos registros já filtrados =====
-    const totalProducao = registros.reduce((s: number, r: any) => s + Number(r.producao), 0);
-    const totalRefugo   = registros.reduce((s: number, r: any) => s + Number(r.refugo), 0);
-    const totalGeral    = totalProducao + totalRefugo;
-    const percentRefugo = totalGeral > 0 ? (totalRefugo / totalGeral) * 100 : 0;
+    doc.text("IMPLATEC PERFIS PLÁSTICOS", pageWidth / 2, y + 6, { align: "center" });
 
     doc.setFontSize(11);
+    doc.setTextColor(50, 50, 50);
+    doc.text("CONTROLE DE REFUGO INDUSTRIAL", pageWidth / 2, y + 12, { align: "center" });
+
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(
+      options.subtitulo || `Relatório de Apontamentos: ${options.tituloPeriodo}`,
+      pageWidth / 2,
+      y + 17,
+      { align: "center" }
+    );
+    y += 24;
+
+    const ordenados = [...options.registros].sort((a, b) =>
+      String(a.data).localeCompare(String(b.data))
+    );
+
+    // ===== TOTAIS — calculados a partir dos registros do período =====
+    const totalProducao = ordenados.reduce((s: number, r: any) => s + Number(r.producao || 0), 0);
+    const totalRefugo   = ordenados.reduce((s: number, r: any) => s + Number(r.refugo || 0), 0);
+    const totalGeral    = totalProducao + totalRefugo;
+    const percentRefugo = totalGeral > 0 ? (totalRefugo / totalGeral) * 100 : 0;
+    const metaRefugo    = options.metaRefugo;
+
+    doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
-    doc.text("RESUMO DO MÊS", marginL, y);
-    y += 8;
+    doc.text("RESUMO DO PERÍODO", marginL, y);
+    y += 5;
 
     doc.setDrawColor(13, 122, 46);
-    doc.setLineWidth(0.5);
-    doc.rect(marginL, y, usableWidth, 25);
+    doc.setLineWidth(0.4);
+    doc.setFillColor(248, 250, 248);
+    doc.rect(marginL, y, usableWidth, 22, "FD");
 
-    const colX = [marginL + 5, marginL + 50, marginL + 95, marginL + 140];
+    const colX = [marginL + 4, marginL + 42, marginL + 80, marginL + 118, marginL + 154];
     const labelY = y + 6;
     const valueY = y + 14;
 
     const fmtNum = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
 
     // Labels
-    doc.setFontSize(8);
+    doc.setFontSize(7.5);
     doc.setTextColor(80, 80, 80);
-    ["Produção Total", "Total Refugo", "Total Geral", "% Refugo"].forEach((label, i) => {
+    ["Produção Total", "Total Refugo", "Total Geral", "% Refugo", "Lançamentos"].forEach((label, i) => {
       doc.text(label, colX[i], labelY);
     });
 
     // Valores
-    doc.setFontSize(12);
+    doc.setFontSize(10.5);
     doc.setTextColor(13, 122, 46);
-    doc.text(fmtNum(totalProducao), colX[0], valueY);
+    doc.text(`${fmtNum(totalProducao)} Kg`, colX[0], valueY);
 
     doc.setTextColor(220, 38, 38);
-    doc.text(fmtNum(totalRefugo), colX[1], valueY);
+    doc.text(`${fmtNum(totalRefugo)} Kg`, colX[1], valueY);
 
     doc.setTextColor(0, 0, 0);
-    doc.text(fmtNum(totalGeral), colX[2], valueY);
+    doc.text(`${fmtNum(totalGeral)} Kg`, colX[2], valueY);
 
     const pColor = percentRefugo <= metaRefugo ? [13, 122, 46] : [220, 38, 38];
     doc.setTextColor(pColor[0], pColor[1], pColor[2]);
-    doc.text(`${percentRefugo.toFixed(2)}%  (meta: ${metaRefugo}%)`, colX[3], valueY);
+    doc.text(`${percentRefugo.toFixed(2)}% (meta: ${metaRefugo.toFixed(2)}%)`, colX[3], valueY);
 
-    y += 32;
+    doc.setTextColor(40, 40, 40);
+    doc.text(`${ordenados.length} dias`, colX[4], valueY);
+
+    y += 28;
+
+    // ===== RESUMO DE MOTIVOS DE REFUGO (se houver) =====
+    const motivosTotais: Record<string, number> = {};
+    ordenados.forEach((r: any) => {
+      (r.motivos || []).forEach((m: any) => {
+        const k = m.motivo || "Outros";
+        motivosTotais[k] = (motivosTotais[k] || 0) + Number(m.quantidade || 0);
+      });
+    });
+
+    const listaMotivos = Object.entries(motivosTotais)
+      .map(([motivo, kg]) => ({ motivo, kg }))
+      .sort((a, b) => b.kg - a.kg);
+
+    if (listaMotivos.length > 0 && totalRefugo > 0) {
+      doc.setFontSize(9);
+      doc.setTextColor(0, 0, 0);
+      doc.text("PRINCIPAIS MOTIVOS DE REFUGO NO PERÍODO", marginL, y);
+      y += 4;
+
+      doc.setFontSize(7.5);
+      const topMotivos = listaMotivos.slice(0, 4);
+      const motivosStr = topMotivos
+        .map(
+          (m) =>
+            `${m.motivo}: ${fmtNum(m.kg)} Kg (${((m.kg / totalRefugo) * 100).toFixed(1)}%)`
+        )
+        .join("   •   ");
+
+      doc.setTextColor(60, 60, 60);
+      doc.text(motivosStr, marginL, y);
+      y += 7;
+    }
 
     // ===== TABELA DE REGISTROS DIÁRIOS =====
-    doc.setFontSize(11);
+    doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
     doc.text("REGISTROS DIÁRIOS", marginL, y);
-    y += 7;
+    y += 5;
 
-    if (registros.length === 0) {
-      doc.setFontSize(9);
+    if (ordenados.length === 0) {
+      doc.setFontSize(8.5);
       doc.setTextColor(120, 120, 120);
-      doc.text("Nenhum registro encontrado para este mês.", marginL, y);
+      doc.text("Nenhum registro encontrado para o período selecionado.", marginL, y);
       y += 10;
     } else {
-      // Larguras das colunas (sem coluna Motivos separada — motivos ficam em linha extra)
       const cols = {
-        data:     { x: marginL,      w: 22, label: "Data",           align: "left"  as const },
-        producao: { x: marginL + 22, w: 32, label: "Produção",       align: "right" as const },
-        refugo:   { x: marginL + 54, w: 28, label: "Refugo",         align: "right" as const },
-        total:    { x: marginL + 82, w: 28, label: "Total",          align: "right" as const },
-        percent:  { x: marginL + 110,w: 22, label: "% Refugo",       align: "right" as const },
-        motivos:  { x: marginL + 132,w: usableWidth - 132, label: "Motivos", align: "left" as const },
+        data:     { x: marginL,       w: 22, label: "Data",           align: "left"  as const },
+        producao: { x: marginL + 22,  w: 30, label: "Produção (Kg)",  align: "right" as const },
+        refugo:   { x: marginL + 52,  w: 26, label: "Refugo (Kg)",    align: "right" as const },
+        total:    { x: marginL + 78,  w: 26, label: "Total (Kg)",     align: "right" as const },
+        percent:  { x: marginL + 104, w: 22, label: "% Refugo",       align: "right" as const },
+        motivos:  { x: marginL + 126, w: usableWidth - 126, label: "Motivos de Refugo", align: "left" as const },
       };
 
       const colList = Object.values(cols);
-      const rowHeight = 5.5;
+      const rowHeight = 5.2;
 
       const drawHeader = () => {
-        doc.setFontSize(8);
+        doc.setFontSize(7.5);
         doc.setTextColor(255, 255, 255);
         doc.setFillColor(13, 122, 46);
         colList.forEach((c) => {
@@ -133,8 +184,7 @@ export async function generateMonthlyPDF(
 
       doc.setFontSize(7);
 
-      registros.forEach((reg: any, idx: number) => {
-        // Formata motivos — pode ocupar várias linhas
+      ordenados.forEach((reg: any, idx: number) => {
         const motivosStr =
           reg.motivos && reg.motivos.length > 0
             ? reg.motivos
@@ -142,39 +192,35 @@ export async function generateMonthlyPDF(
                 .join("; ")
             : "—";
 
-        // Quebra motivos se for longo demais para a coluna
         const motivosLines = doc.splitTextToSize(motivosStr, cols.motivos.w - 3);
         const lineCount = motivosLines.length;
-        const totalRowH = Math.max(rowHeight, lineCount * 3.8 + 1.5);
+        const totalRowH = Math.max(rowHeight, lineCount * 3.6 + 1.6);
 
-        // Nova página se necessário
-        if (y + totalRowH > pageHeight - 20) {
+        // Nova página se ultrapassar o limite inferior
+        if (y + totalRowH > pageHeight - 16) {
           doc.addPage();
-          y = 10;
+          y = 12;
           drawHeader();
           doc.setFontSize(7);
         }
 
         // Fundo zebrado
-        const bg = idx % 2 === 0 ? [245, 247, 245] : [255, 255, 255];
+        const bg = idx % 2 === 0 ? [248, 250, 248] : [255, 255, 255];
         doc.setFillColor(bg[0], bg[1], bg[2]);
         colList.forEach((c) => doc.rect(c.x, y, c.w, totalRowH, "F"));
 
-        // Borda inferior suave
-        doc.setDrawColor(220, 220, 220);
+        // Linha divisória suave
+        doc.setDrawColor(230, 230, 230);
         doc.setLineWidth(0.2);
         doc.line(marginL, y + totalRowH, marginL + usableWidth, y + totalRowH);
 
-        doc.setTextColor(30, 30, 30);
-
-        const producaoN = Number(reg.producao);
-        const refugoN   = Number(reg.refugo);
+        const producaoN = Number(reg.producao || 0);
+        const refugoN   = Number(reg.refugo || 0);
         const totalN    = producaoN + refugoN;
         const pct       = totalN > 0 ? (refugoN / totalN) * 100 : 0;
 
-        // Formata data sem problema de timezone: lê direto da string YYYY-MM-DD
-        const [ano, mes, dia] = (reg.data as string).split("-");
-        const dataFormatada = `${dia}/${mes}/${ano}`;
+        const [ano, mes, dia] = String(reg.data).split("-");
+        const dataFormatada = dia && mes && ano ? `${dia}/${mes}/${ano}` : String(reg.data);
 
         const values: Record<string, string> = {
           data:     dataFormatada,
@@ -182,10 +228,9 @@ export async function generateMonthlyPDF(
           refugo:   fmtNum(refugoN),
           total:    fmtNum(totalN),
           percent:  `${pct.toFixed(2)}%`,
-          motivos:  "", // tratado separadamente
+          motivos:  "",
         };
 
-        // Colore % refugo por status
         Object.entries(cols).forEach(([key, c]) => {
           if (key === "motivos") return;
           const tx = c.align === "right" ? c.x + c.w - 2 : c.x + 2;
@@ -197,27 +242,55 @@ export async function generateMonthlyPDF(
           doc.text(values[key], tx, y + rowHeight - 1.2, { align: c.align });
         });
 
-        // Motivos (multi-linha)
+        // Motivos
         doc.setTextColor(60, 60, 60);
-        doc.text(motivosLines, cols.motivos.x + 2, y + 3.8);
+        doc.text(motivosLines, cols.motivos.x + 2, y + 3.6);
 
         y += totalRowH;
       });
     }
 
-    // ===== RODAPÉ =====
+    // ===== RODAPÉ COM PAGINAÇÃO EM TODAS AS PÁGINAS =====
+    const totalPages = doc.getNumberOfPages();
     const now = new Date();
-    doc.setFontSize(7);
-    doc.setTextColor(160, 160, 160);
-    const rodape = `Gerado em ${now.toLocaleDateString("pt-BR")} às ${now.toLocaleTimeString("pt-BR")} — Total de registros: ${registros.length}`;
-    doc.text(rodape, pageWidth / 2, pageHeight - 8, { align: "center" });
+    const dataHoraStr = `${now.toLocaleDateString("pt-BR")} às ${now.toLocaleTimeString("pt-BR")}`;
 
-    doc.save(`Refugo_${MESES_NOMES[mesAtual - 1]}_${anoAtual}.pdf`);
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p);
+      doc.setFontSize(6.5);
+      doc.setTextColor(140, 140, 140);
+      const rodape = `Implatec Perfis Plásticos • Controle de Refugo Industrial • Período: ${options.tituloPeriodo} • Gerado em ${dataHoraStr} • Página ${p} de ${totalPages}`;
+      doc.text(rodape, pageWidth / 2, pageHeight - 6, { align: "center" });
+    }
+
+    const nomeArquivoFinal = options.nomeArquivo ||
+      `Refugo_Relatorio_${(options.dataInicio || "inicio")}_a_${(options.dataFim || "fim")}.pdf`;
+
+    doc.save(nomeArquivoFinal);
     return true;
   } catch (error) {
     console.error("Erro ao gerar PDF:", error);
     throw error;
   }
+}
+
+/**
+ * Função mantida para retrocompatibilidade
+ */
+export async function generateMonthlyPDF(
+  mesAtual: number,
+  anoAtual: number,
+  registros: any[],
+  metaRefugo: number
+) {
+  const nomeMes = MESES_NOMES[mesAtual - 1];
+  return generatePeriodReportPDF({
+    tituloPeriodo: `${nomeMes} / ${anoAtual}`,
+    subtitulo: `Relatório de ${nomeMes} ${anoAtual}`,
+    registros,
+    metaRefugo,
+    nomeArquivo: `Refugo_${nomeMes}_${anoAtual}.pdf`,
+  });
 }
 
 // ===== RELATÓRIO DE PRODUTOS & MOTIVOS DE REFUGO (PADRÃO IMPLATEC) =====

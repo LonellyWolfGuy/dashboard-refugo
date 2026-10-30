@@ -311,7 +311,7 @@ export function useTVMode(): TVModeState {
 
     sessionIntervalRef.current = setInterval(async () => {
       try {
-        const { error } = await supabase.auth.refreshSession();
+        const { error } = await (supabase.auth as any).refreshSession();
         if (error) console.warn("[TV] Erro ao renovar sessão:", error.message);
       } catch (e) {
         console.warn("[TV] Falha na renovação de sessão:", e);

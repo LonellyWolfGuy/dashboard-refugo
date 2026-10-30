@@ -3,8 +3,9 @@
 // O Supabase gerencia sessões, tokens JWT e segurança automaticamente.
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+
+export type Session = any;
 
 export interface AuthUser {
   id: string;
@@ -22,7 +23,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-function sessionToUser(session: Session | null): AuthUser | null {
+function sessionToUser(session: any): AuthUser | null {
   if (!session?.user) return null;
   const u = session.user;
   return {
@@ -39,24 +40,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Carrega a sessão ativa assim que o app inicia
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setUser(sessionToUser(data.session));
+    (supabase.auth as any).getSession().then(({ data }: any) => {
+      setSession(data?.session ?? null);
+      setUser(sessionToUser(data?.session));
       setLoading(false);
     });
 
     // Escuta mudanças de login/logout em tempo real
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: listener } = (supabase.auth as any).onAuthStateChange((_event: any, newSession: any) => {
       setSession(newSession);
       setUser(sessionToUser(newSession));
       setLoading(false);
     });
 
-    return () => listener.subscription.unsubscribe();
+    return () => listener?.subscription?.unsubscribe();
   }, []);
 
   async function login(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await (supabase.auth as any).signInWithPassword({ email, password });
     if (error) {
       if (error.message.includes("Invalid login credentials")) {
         throw new Error("E-mail ou senha incorretos.");
@@ -69,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function logout() {
-    await supabase.auth.signOut();
+    await (supabase.auth as any).signOut();
   }
 
   return (

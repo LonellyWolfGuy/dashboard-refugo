@@ -16,11 +16,13 @@ import {
   AlertCircle,
   CalendarDays,
   FileSpreadsheet,
+  Download,
   ChevronRight,
   Filter,
 } from "lucide-react";
 import { toast } from "sonner";
 import ModalMotivoRefugo from "./ModalMotivoRefugo";
+import ModalExportarRelatorio from "./ModalExportarRelatorio";
 import { exportMonthlyCSV } from "@/lib/exportExcel";
 import {
   AlertDialog,
@@ -80,6 +82,7 @@ export default function TabelaRegistros() {
   const [linhasExpandidas, setLinhasExpandidas] = useState<Record<string, boolean>>({});
 
   const [modalMotivoAberto, setModalMotivoAberto] = useState(false);
+  const [modalExportarAberto, setModalExportarAberto] = useState(false);
   const [registroSelecionado, setRegistroSelecionado] = useState<DailyRecord | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
@@ -329,15 +332,14 @@ export default function TabelaRegistros() {
 
         {/* Ações superiores */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Botão Exportar Excel */}
+          {/* Botão Exportar Relatório */}
           <button
-            onClick={() => exportMonthlyCSV(mesAtual, anoAtual, mesData.registros, metaRefugo)}
-            disabled={mesData.registros.length === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-            title="Baixar planilha formatada para Excel (.csv)"
+            onClick={() => setModalExportarAberto(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm cursor-pointer"
+            title="Exportar lançamentos por período em Excel (.xlsx) ou PDF"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5" />
-            <span>Exportar Excel</span>
+            <Download className="w-3.5 h-3.5" />
+            <span>Exportar Relatório</span>
           </button>
 
           {/* Botão Novo Lançamento */}
@@ -830,6 +832,14 @@ export default function TabelaRegistros() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal de Exportação de Relatório por Período */}
+      {modalExportarAberto && (
+        <ModalExportarRelatorio
+          aberto={modalExportarAberto}
+          onClose={() => setModalExportarAberto(false)}
+        />
+      )}
     </div>
   );
 }

@@ -21,6 +21,7 @@ interface DashboardContextType {
   getMesData: (mes: number) => MonthData;
   getTotaisMes: (mes: number) => { totalProducao: number; totalRefugo: number; total: number; percentRefugo: number };
   getTotaisAnuais: () => { totalProducao: number; totalRefugo: number; total: number; percentRefugo: number };
+  buscarRegistrosPeriodo: (dataInicio: string, dataFim: string) => Promise<DailyRecord[]>;
   salvarTudo: () => Promise<void>;
   ultimaSync: refugoService.UltimaSyncInfo | null;
   rankingProdutos: refugoService.RankingProdutosInfo | null;
@@ -67,21 +68,21 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   // Mutations com Optimistic Updates
   const addMutation = useMutation({
     mutationFn: ({ mes, ano, req }: any) => refugoService.inserirRegistro(mes, ano, req),
-    onMutate: async ({ mes, ano, req }: any) => {
+    onMutate: async ({ ano, req }: any) => {
       await queryClient.cancelQueries({ queryKey: ["registros", ano] });
       const previous = queryClient.getQueryData<DailyRecord[]>(["registros", ano]);
       if (previous) {
         const tempRecord = { ...req, id: `temp-${Date.now()}` };
-        queryClient.setQueryData<DailyRecord[]>(["registros", ano], old => [...(old || []), tempRecord]);
+        queryClient.setQueryData<DailyRecord[]>(["registros", ano], (old: DailyRecord[] | undefined) => [...(old || []), tempRecord]);
       }
       return { previous };
     },
-    onError: (err, variables, context) => {
+    onError: (_err: unknown, variables: any, context: any) => {
       if (context?.previous) {
         queryClient.setQueryData(["registros", variables.ano], context.previous);
       }
     },
-    onSettled: (_data, _error, variables) => {
+    onSettled: (_data: any, _error: any, variables: any) => {
       queryClient.invalidateQueries({ queryKey: ["registros", variables.ano] });
       if (variables.ano !== anoAtual) {
         queryClient.invalidateQueries({ queryKey: ["registros", anoAtual] });
@@ -95,13 +96,13 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       await queryClient.cancelQueries({ queryKey: ["registros", anoAtual] });
       const previous = queryClient.getQueryData<DailyRecord[]>(["registros", anoAtual]);
       if (previous) {
-        queryClient.setQueryData<DailyRecord[]>(["registros", anoAtual], old => 
-          (old || []).map(r => r.id === id ? { ...r, ...req } : r)
+        queryClient.setQueryData<DailyRecord[]>(["registros", anoAtual], (old: DailyRecord[] | undefined) => 
+          (old || []).map((r: DailyRecord) => r.id === id ? { ...r, ...req } : r)
         );
       }
       return { previous };
     },
-    onError: (err, variables, context) => {
+    onError: (_err: unknown, _variables: any, context: any) => {
       if (context?.previous) {
         queryClient.setQueryData(["registros", anoAtual], context.previous);
       }
@@ -115,13 +116,13 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       await queryClient.cancelQueries({ queryKey: ["registros", anoAtual] });
       const previous = queryClient.getQueryData<DailyRecord[]>(["registros", anoAtual]);
       if (previous) {
-        queryClient.setQueryData<DailyRecord[]>(["registros", anoAtual], old => 
-          (old || []).filter(r => r.id !== id)
+        queryClient.setQueryData<DailyRecord[]>(["registros", anoAtual], (old: DailyRecord[] | undefined) => 
+          (old || []).filter((r: DailyRecord) => r.id !== id)
         );
       }
       return { previous };
     },
-    onError: (err, id, context) => {
+    onError: (_err: unknown, _id: string, context: any) => {
       if (context?.previous) {
         queryClient.setQueryData(["registros", anoAtual], context.previous);
       }
@@ -157,7 +158,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   }, [mConfig.motivos, configMutation]);
 
   const removerMotivo = useCallback(async (motivo: string) => {
-    const novos = mConfig.motivos.filter(m => m !== motivo);
+    const novos = mConfig.motivos.filter((m: string) => m !== motivo);
     await configMutation.mutateAsync({ chave: "motivos", valor: novos });
   }, [mConfig.motivos, configMutation]);
 
@@ -193,18 +194,32 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
 
   const getTotaisAnuais = useCallback(() => totaisAnuaisMemo, [totaisAnuaisMemo]);
 
+  const buscarRegistrosPeriodo = useCallback(async (dataInicio: string, dataFim: string): Promise<DailyRecord[]> => {
+    try {
+      const remotos = await refugoService.lerRegistrosPeriodo(dataInicio, dataFim);
+      if (remotos && remotos.length > 0) return remotos;
+    } catch (err) {
+      console.warn("Aviso ao buscar registros por período via Supabase, usando registros em memória:", err);
+    }
+    const locais = meses
+      .flatMap(m => m.registros)
+      .filter(r => r.data >= dataInicio && r.data <= dataFim)
+      .sort((a, b) => a.data.localeCompare(b.data));
+    return locais;
+  }, [meses]);
+
   const providerValue = useMemo(() => ({
     meses, mesAtual, anoAtual, metaRefugo: mConfig.metaRefugo, motivos: mConfig.motivos, carregando,
     setMesAtual, setAnoAtual, adicionarRegistro, editarRegistro, excluirRegistro,
     setMetaRefugo, adicionarMotivo, removerMotivo,
-    getMesData, getTotaisMes, getTotaisAnuais, salvarTudo,
+    getMesData, getTotaisMes, getTotaisAnuais, buscarRegistrosPeriodo, salvarTudo,
     ultimaSync: config?.ultimaSync || null,
     rankingProdutos: config?.rankingProdutos || null,
   }), [
     meses, mesAtual, anoAtual, mConfig.metaRefugo, mConfig.motivos, carregando,
     setMesAtual, setAnoAtual, adicionarRegistro, editarRegistro, excluirRegistro,
     setMetaRefugo, adicionarMotivo, removerMotivo,
-    getMesData, getTotaisMes, getTotaisAnuais, salvarTudo,
+    getMesData, getTotaisMes, getTotaisAnuais, buscarRegistrosPeriodo, salvarTudo,
     config?.ultimaSync,
     config?.rankingProdutos,
   ]);
